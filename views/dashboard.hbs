@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PR Cycle-Time Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>PR Cycle-Time Dashboard</h1>
+
+    <!-- Form để nhập PR IDs -->
+    <div class="form-section">
+      <form method="POST" action="/dashboard/get-data">
+        <div class="form-group">
+          <label for="prIds">Nhập danh sách PR IDs (cách nhau bởi dấu phẩy):</label>
+          <input type="text" id="prIds" name="prIds" placeholder="Ví dụ: 1,2,3,4,5" required>
+        </div>
+        <button type="submit">Get Data</button>
+      </form>
+    </div>
+
+    <!-- Date selector -->
+    {{#if availableDates}}
+    <div class="date-selector">
+      <label for="dateSelect">Chọn ngày xem dữ liệu:</label>
+      <select id="dateSelect" onchange="window.location.href='/dashboard?date=' + this.value">
+        <option value="">Hôm nay</option>
+        {{#each availableDates}}
+        <option value="{{this}}" {{#if (eq this ../selectedDate)}}selected{{/if}}>{{this}}</option>
+        {{/each}}
+      </select>
+    </div>
+    {{/if}}
+
+    {{#if hasData}}
+      <!-- Bảng dữ liệu -->
+      <table>
+        <thead>
+          <tr>
+            <th>PR Number</th>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Status</th>
+            <th>Commit to Open (h)</th>
+            <th>Open to Review (h)</th>
+            <th>Review to Approval (h)</th>
+            <th>Approval to Merge (h)</th>
+            <th>Time from Open to Merge (h)</th>
+            <th>Total Cycle Time (h)</th>
+            <th>Workflow</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each data}}
+          <tr>
+            <td><strong>#{{prNumber}}</strong></td>
+            <td class="title-cell">
+              {{#if url}}
+                <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{title}}</a>
+              {{else}}
+                {{title}}
+              {{/if}}
+            </td>
+            <td>{{author}}</td>
+            <td>
+              <span class="status-badge 
+                {{#if (eq status 'Merged')}}status-merged{{else}}
+                {{#if (eq status 'Open')}}status-open{{else}}
+                {{#if (eq status 'Closed')}}status-closed{{else}}
+                {{#if (eq status 'Draft')}}status-draft{{else}}
+                status-unknown{{/if}}{{/if}}{{/if}}{{/if}}
+              ">{{status}}</span>
+            </td>
+            <td>{{commitToOpen}}</td>
+            <td>{{openToReview}}</td>
+            <td>{{reviewToApproval}}</td>
+            <td>{{approvalToMerge}}</td>
+            <td><strong>{{add openToReview reviewToApproval approvalToMerge}}</strong></td>
+            <td><strong>{{add commitToOpen openToReview reviewToApproval approvalToMerge}}</strong></td>
+            <td>
+              <button class="btn-workflow" data-pr-number="{{prNumber}}" data-pr-data='{{{json this}}}' onclick="openWorkflowModalFromButton(this)">View Details</button>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <!-- Summary Chart -->
+      <div class="chart-container">
+        <h2>Tổng quan Cycle Time</h2>
+        <canvas id="summaryChart"></canvas>
+      </div>
+
+      <!-- Workflow Charts cho từng PR -->
+      {{#each data}}
+      <div class="chart-container">
+        <h3>PR #{{prNumber}} - Workflow Timeline</h3>
+        <canvas id="workflowChart-{{prNumber}}"></canvas>
+      </div>
+      {{/each}}
+
+      <!-- Hidden data for JavaScript -->
+      <script id="chart-data" type="application/json">{{json data}}</script>
+      <script src="/dashboard.js"></script>
+    {{else}}
+      <div class="no-data">
+        <p>Chưa có dữ liệu. Vui lòng nhập PR IDs và bấm "Get Data" để bắt đầu.</p>
+      </div>
+    {{/if}}
+  </div>
+
+  <!-- Workflow Modal -->
+  <div id="workflowModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">PR Workflow Details</h2>
+        <span class="close" onclick="closeWorkflowModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div id="workflowTimeline"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
