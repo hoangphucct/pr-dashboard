@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  pr-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: pr-dashboard
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./src:/app/src
+      - ./views:/app/views
+      - ./public:/app/public
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./nest-cli.json:/app/nest-cli.json
+      - ./.env:/app/.env
+      - ./data:/app/data
+      - /app/node_modules
+    command: npm run start:dev
+    restart: unless-stopped
+    networks:
+      - pr-dashboard-network
+
+networks:
+  pr-dashboard-network:
+    driver: bridge

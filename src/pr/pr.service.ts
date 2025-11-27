@@ -12,6 +12,7 @@ interface GitHubReview {
   state: string;
   submitted_at: string;
   created_at: string;
+  body?: string;
 }
 
 interface GitHubComment {
@@ -50,12 +51,29 @@ export class PrService {
       this.githubService.getPullRequestEvents(prNumber),
     ]);
 
+    const status = this.getPrStatus(prDetails);
+
+    // If PR is Draft, return 0 for all metrics (only start calculating when opened or merged)
+    if (status === 'Draft') {
+      return {
+        prNumber,
+        title: prDetails.title || `PR #${prNumber}`,
+        author: prDetails.user?.login || 'Unknown',
+        url: prDetails.html_url || '',
+        status,
+        commitToOpen: 0,
+        openToReview: 0,
+        reviewToApproval: 0,
+        approvalToMerge: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
     const commitToOpen = this.calculateCommitToOpen(prDetails, events);
     const openToReview = this.calculateOpenToReview(prDetails);
     const reviewToApproval = this.calculateReviewToApproval(prDetails);
     const approvalToMerge = this.calculateApprovalToMerge(prDetails);
-
-    const status = this.getPrStatus(prDetails);
 
     return {
       prNumber,
@@ -75,7 +93,7 @@ export class PrService {
   /**
    * Calculate time from first commit to when PR was opened/ready for review
    */
-  private calculateCommitToOpen(
+  calculateCommitToOpen(
     prDetails: GitHubPullRequestDetail,
     events: unknown[],
   ): number {
@@ -89,8 +107,31 @@ export class PrService {
         new Date(b.commit.author.date).getTime(),
     );
 
-    const firstCommit = sortedCommits[0];
+    // Filter out merge commits to get the actual first work commit
+    const nonMergeCommits = sortedCommits.filter((commit) => {
+      const message = commit.commit.message.toLowerCase();
+      return (
+        !message.startsWith('merge pull request') &&
+        !message.startsWith('merge branch') &&
+        !message.startsWith('merge ') &&
+        (!commit.parents || commit.parents.length <= 1)
+      );
+    });
+
+    // Priority 1: Find commit with "Work has started on the" message
+    const workStartedCommit = nonMergeCommits.find((commit) =>
+      commit.commit.message.toLowerCase().startsWith('work has started on the'),
+    );
+
+    // Priority 2: Use first non-merge commit, or first commit if all are merge commits
+    const firstCommit = workStartedCommit ||
+      (nonMergeCommits.length > 0 ? nonMergeCommits[0] : sortedCommits[0]);
+    
     const firstCommitDate = new Date(firstCommit.commit.author.date).getTime();
+    
+    if (!workStartedCommit) {
+      console.warn(`WARNING - No "Work has started on the" commit found in calculateCommitToOpen!`);
+    }
 
     const allEvents = (events || []) as GitHubEvent[];
 
@@ -122,18 +163,32 @@ export class PrService {
 
   /**
    * Calculate time from PR open to first review comment
+   * Priority: review comments (reviews with state COMMENTED) > review_comments > issue comments
    */
-  private calculateOpenToReview(prDetails: GitHubPullRequestDetail): number {
+  calculateOpenToReview(prDetails: GitHubPullRequestDetail): number {
     const prOpenedDate = new Date(prDetails.created_at).getTime();
 
     const reviews = (prDetails.reviews || []) as unknown as GitHubReview[];
     const reviewComments = (prDetails.review_comments || []) as GitHubComment[];
 
+    // Priority 1: Reviews with state COMMENTED (overall review comments)
+    const reviewCommentsWithState = reviews.filter(
+      (review) =>
+        review.state === 'COMMENTED' &&
+        review.submitted_at &&
+        review.body &&
+        review.body.trim().length > 0,
+    );
+
+    // Priority 2: Review comments (inline comments on code)
+    const inlineReviewComments = reviewComments.filter(
+      (comment) => comment.created_at || comment.submitted_at,
+    );
+
+    // Combine with priority: review comments first, then inline review comments
     const allReviewComments: Array<GitHubReview | GitHubComment> = [
-      ...reviews.filter(
-        (review) => review.state !== 'APPROVED' && review.submitted_at,
-      ),
-      ...reviewComments,
+      ...reviewCommentsWithState,
+      ...inlineReviewComments,
     ].filter((item) => item.submitted_at || item.created_at);
 
     if (allReviewComments.length === 0) {
@@ -157,9 +212,7 @@ export class PrService {
   /**
    * Calculate time from first review comment to last approval
    */
-  private calculateReviewToApproval(
-    prDetails: GitHubPullRequestDetail,
-  ): number {
+  calculateReviewToApproval(prDetails: GitHubPullRequestDetail): number {
     const reviews = (prDetails.reviews || []) as unknown as GitHubReview[];
     const allReviews = reviews.filter((review) => review.submitted_at);
 
@@ -190,7 +243,7 @@ export class PrService {
   /**
    * Calculate time from last approval to merge
    */
-  private calculateApprovalToMerge(prDetails: GitHubPullRequestDetail): number {
+  calculateApprovalToMerge(prDetails: GitHubPullRequestDetail): number {
     const reviews = (prDetails.reviews || []) as unknown as GitHubReview[];
     const approvals = reviews.filter(
       (review) => review.state === 'APPROVED' && review.submitted_at,
@@ -213,7 +266,7 @@ export class PrService {
   /**
    * Get PR status based on state and merged_at
    */
-  private getPrStatus(prDetails: GitHubPullRequestDetail): string {
+  getPrStatus(prDetails: GitHubPullRequestDetail): string {
     if (prDetails.merged_at) {
       return 'Merged';
     }

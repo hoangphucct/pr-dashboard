@@ -55,18 +55,62 @@ export class StorageService {
   }
 
   /**
-   * Save PR metrics data for today (overwrite if same day)
+   * Save PR metrics data for today (merge with existing data, update only new/changed PRs)
+   * If a PR already exists and forceUpdate is false, it will be skipped
    */
-  saveTodayData(prs: PrMetrics[]): void {
+  saveTodayData(prs: PrMetrics[], forceUpdate = false): void {
     const today = this.getTodayDate();
     const filePath = this.getFilePath(today);
+    const existingData = this.loadTodayData();
+
+    // Merge existing PRs with new PRs (update existing, add new)
+    // First, filter out any null/invalid values from existing data
+    const existingPrsMap = new Map<number, PrMetrics>();
+    if (existingData?.prs && Array.isArray(existingData.prs)) {
+      existingData.prs
+        .filter(
+          (pr) =>
+            pr != null &&
+            typeof pr === 'object' &&
+            'prNumber' in pr &&
+            pr.prNumber != null &&
+            typeof pr.prNumber === 'number',
+        )
+        .forEach((pr) => {
+          existingPrsMap.set(pr.prNumber, pr);
+        });
+    }
+
+    // Update or add new PRs
+    // If forceUpdate is false and PR already exists, skip it
+    // Also filter out any null/undefined/invalid PRs
+    prs.forEach((pr) => {
+      if (
+        pr != null &&
+        typeof pr === 'object' &&
+        'prNumber' in pr &&
+        pr.prNumber != null &&
+        typeof pr.prNumber === 'number'
+      ) {
+        if (forceUpdate || !existingPrsMap.has(pr.prNumber)) {
+          existingPrsMap.set(pr.prNumber, pr);
+        }
+      }
+    });
+
+    // Filter out any null/undefined values from merged PRs
+    const mergedPrs = Array.from(existingPrsMap.values()).filter(
+      (pr) =>
+        pr != null &&
+        typeof pr === 'object' &&
+        'prNumber' in pr &&
+        pr.prNumber != null,
+    );
 
     const data: DailyData = {
       date: today,
-      prs,
-      createdAt: existsSync(filePath)
-        ? this.loadTodayData()?.createdAt || new Date().toISOString()
-        : new Date().toISOString(),
+      prs: mergedPrs,
+      createdAt: existingData?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
@@ -86,7 +130,21 @@ export class StorageService {
 
     try {
       const content = readFileSync(filePath, 'utf-8');
-      return JSON.parse(content) as DailyData;
+      const data = JSON.parse(content) as DailyData;
+      
+      // Clean up any null/undefined values in prs array
+      if (data.prs && Array.isArray(data.prs)) {
+        data.prs = data.prs.filter(
+          (pr) =>
+            pr != null &&
+            typeof pr === 'object' &&
+            'prNumber' in pr &&
+            pr.prNumber != null &&
+            typeof pr.prNumber === 'number',
+        );
+      }
+      
+      return data;
     } catch (error) {
       console.error("Error loading today's data:", error);
       return null;
@@ -105,7 +163,21 @@ export class StorageService {
 
     try {
       const content = readFileSync(filePath, 'utf-8');
-      return JSON.parse(content) as DailyData;
+      const data = JSON.parse(content) as DailyData;
+      
+      // Clean up any null/undefined values in prs array
+      if (data.prs && Array.isArray(data.prs)) {
+        data.prs = data.prs.filter(
+          (pr) =>
+            pr != null &&
+            typeof pr === 'object' &&
+            'prNumber' in pr &&
+            pr.prNumber != null &&
+            typeof pr.prNumber === 'number',
+        );
+      }
+      
+      return data;
     } catch (error) {
       console.error('Error loading data for date:', date, error);
       return null;

@@ -17,6 +17,7 @@ interface GitHubReview {
   id: number;
   state: string;
   submitted_at: string;
+  body: string;
   user: {
     login: string;
   };
@@ -30,6 +31,10 @@ interface GitHubComment {
   };
 }
 
+interface GitHubLabel {
+  name: string;
+}
+
 interface GitHubPullRequest {
   number: number;
   title: string;
@@ -39,6 +44,7 @@ interface GitHubPullRequest {
   created_at: string;
   updated_at: string;
   merged_at: string | null;
+  labels?: GitHubLabel[];
   base: {
     sha: string;
     ref: string;
@@ -57,6 +63,10 @@ export interface GitHubPullRequestDetail extends GitHubPullRequest {
   comments: GitHubComment[];
   review_comments: GitHubComment[];
   commits: GitHubCommit[];
+  changed_files?: number;
+  additions?: number;
+  deletions?: number;
+  labels?: GitHubLabel[];
 }
 
 @Injectable()
@@ -85,23 +95,31 @@ export class GitHubService {
   async getPullRequestDetails(
     prNumber: number,
   ): Promise<GitHubPullRequestDetail> {
-    const [pr, commits, reviews, comments, reviewComments] = await Promise.all([
-      this.apiClient.get<GitHubPullRequest>(
-        `/repos/${this.owner}/${this.repo}/pulls/${prNumber}`,
-      ),
-      this.apiClient.get<GitHubCommit[]>(
-        `/repos/${this.owner}/${this.repo}/pulls/${prNumber}/commits`,
-      ),
-      this.apiClient.get<GitHubReview[]>(
-        `/repos/${this.owner}/${this.repo}/pulls/${prNumber}/reviews`,
-      ),
-      this.apiClient.get<GitHubComment[]>(
-        `/repos/${this.owner}/${this.repo}/issues/${prNumber}/comments`,
-      ),
-      this.apiClient.get<GitHubComment[]>(
-        `/repos/${this.owner}/${this.repo}/pulls/${prNumber}/comments`,
-      ),
-    ]);
+    const [pr, commits, reviews, comments, reviewComments, issue] =
+      await Promise.all([
+        this.apiClient.get<
+          GitHubPullRequest & {
+            changed_files?: number;
+            additions?: number;
+            deletions?: number;
+          }
+        >(`/repos/${this.owner}/${this.repo}/pulls/${prNumber}`),
+        this.apiClient.get<GitHubCommit[]>(
+          `/repos/${this.owner}/${this.repo}/pulls/${prNumber}/commits`,
+        ),
+        this.apiClient.get<GitHubReview[]>(
+          `/repos/${this.owner}/${this.repo}/pulls/${prNumber}/reviews`,
+        ),
+        this.apiClient.get<GitHubComment[]>(
+          `/repos/${this.owner}/${this.repo}/issues/${prNumber}/comments`,
+        ),
+        this.apiClient.get<GitHubComment[]>(
+          `/repos/${this.owner}/${this.repo}/pulls/${prNumber}/comments`,
+        ),
+        this.apiClient.get<{ labels?: GitHubLabel[] }>(
+          `/repos/${this.owner}/${this.repo}/issues/${prNumber}`,
+        ),
+      ]);
 
     return {
       ...pr.data,
@@ -109,6 +127,10 @@ export class GitHubService {
       reviews: reviews.data,
       comments: comments.data,
       review_comments: reviewComments.data,
+      changed_files: pr.data.changed_files,
+      additions: pr.data.additions,
+      deletions: pr.data.deletions,
+      labels: issue.data.labels || pr.data.labels || [],
     };
   }
 
@@ -140,6 +162,69 @@ export class GitHubService {
       return response.data.commits?.map((commit) => commit.sha) || [];
     } catch (error) {
       console.error('Error fetching base branch commits:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all pull requests created on a specific date
+   */
+  async getPullRequestsByDate(date: string): Promise<GitHubPullRequest[]> {
+    try {
+      // Format date as YYYY-MM-DD
+      const startDate = `${date}T00:00:00Z`;
+      const endDate = `${date}T23:59:59Z`;
+
+      const allPRs: GitHubPullRequest[] = [];
+      let page = 1;
+      const perPage = 100;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await this.apiClient.get<GitHubPullRequest[]>(
+          `/repos/${this.owner}/${this.repo}/pulls`,
+          {
+            params: {
+              state: 'all', // Get all PRs (open, closed, merged)
+              sort: 'created',
+              direction: 'desc',
+              per_page: perPage,
+              page,
+            },
+          },
+        );
+
+        const prs = response.data;
+        if (prs.length === 0) {
+          break;
+        }
+
+        // Filter PRs created on the specified date
+        for (const pr of prs) {
+          const prCreatedAt = new Date(pr.created_at);
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+
+          if (prCreatedAt >= start && prCreatedAt <= end) {
+            allPRs.push(pr);
+          } else if (prCreatedAt < start) {
+            // Since PRs are sorted by created date desc, if we find one before our date, we can stop
+            hasMore = false;
+            break;
+          }
+        }
+
+        // If we got less than perPage results, we've reached the end
+        if (prs.length < perPage) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+
+      return allPRs;
+    } catch (error) {
+      console.error('Error fetching PRs by date:', error);
       return [];
     }
   }

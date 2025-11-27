@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PR Cycle-Time Dashboard</title>
   <link rel="stylesheet" href="/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+  <!-- Load Chart.js first -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <div class="container">
     <h1>PR Cycle-Time Dashboard</h1>
-
     <!-- Form để nhập PR IDs -->
     <div class="form-section">
       <form method="POST" action="/dashboard/get-data">
@@ -20,6 +20,15 @@
         </div>
         <button type="submit">Get Data</button>
       </form>
+      {{#if hasData}}
+      <div style="margin-top: 15px;">
+        <form method="POST" action="/dashboard/update-all-today" style="display: inline;">
+          <button type="submit" style="background-color: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+            Update All PRs for Today
+          </button>
+        </form>
+      </div>
+      {{/if}}
     </div>
 
     <!-- Date selector -->
@@ -103,14 +112,17 @@
       {{/each}}
 
       <!-- Hidden data for JavaScript -->
-      <script id="chart-data" type="application/json">{{json data}}</script>
-      <script src="/dashboard.js"></script>
+      <!-- Debug: Data exists: {{#if data}}YES{{else}}NO{{/if}}, Length: {{length data}} -->
+      <script id="chart-data" type="application/json">{{{json data}}}</script>
     {{else}}
       <div class="no-data">
         <p>Chưa có dữ liệu. Vui lòng nhập PR IDs và bấm "Get Data" để bắt đầu.</p>
       </div>
     {{/if}}
   </div>
+
+  <!-- Load dashboard.js after Chart.js -->
+  <script src="/dashboard.js"></script>
 
   <!-- Workflow Modal -->
   <div id="workflowModal" class="modal">

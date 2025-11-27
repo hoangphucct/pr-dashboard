@@ -11,20 +11,40 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-  hbs.default.registerHelper('json', (context: unknown, field?: string) => {
-    if (field) {
-      if (Array.isArray(context)) {
-        return JSON.stringify(
-          context.map((item) => (item as Record<string, unknown>)[field]),
-        );
-      }
-      return JSON.stringify([]);
+  hbs.default.registerHelper('json', (context: unknown) => {
+    // Simple JSON stringify helper
+    // Use triple braces {{{json data}}} in template to prevent HTML escaping
+    if (context === null || context === undefined) {
+      return 'null';
     }
+    
+    // If it's an array, filter out null/undefined values
+    if (Array.isArray(context)) {
+      const filtered = context.filter(
+        (item) =>
+          item !== null &&
+          item !== undefined &&
+          typeof item === 'object' &&
+          'prNumber' in item,
+      );
+      return JSON.stringify(filtered);
+    }
+    
     return JSON.stringify(context);
   });
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   hbs.default.registerHelper('eq', (a: unknown, b: unknown) => a === b);
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+  hbs.default.registerHelper('length', (arr: unknown) => {
+    return Array.isArray(arr) ? arr.length : 0;
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+  hbs.default.registerHelper('gt', (a: unknown, b: unknown) => {
+    return Number(a) > Number(b);
+  });
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   hbs.default.registerHelper('or', (...args: unknown[]) => {

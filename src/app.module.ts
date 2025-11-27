@@ -6,6 +6,8 @@ import { PrService } from './pr/pr.service';
 import { DashboardController } from './dashboard/dashboard.controller';
 import { GitHubService } from './github/github.service';
 import { StorageService } from './storage/storage.service';
+import { WorkflowStorageService } from './workflow/workflow-storage.service';
+import { WorkflowValidationService } from './workflow/workflow-validation.service';
 
 @Module({
   imports: [
@@ -15,6 +17,13 @@ import { StorageService } from './storage/storage.service';
     }),
   ],
   controllers: [AppController, DashboardController],
-  providers: [AppService, PrService, GitHubService, StorageService],
+  providers: [
+    AppService,
+    PrService,
+    GitHubService,
+    StorageService,
+    WorkflowStorageService,
+    WorkflowValidationService,
+  ],
 })
 export class AppModule {}

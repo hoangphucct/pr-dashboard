@@ -2,8 +2,14 @@
  * Initialize summary chart with PR cycle time data
  */
 function initSummaryChart(data) {
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js is not loaded');
+    return;
+  }
+
   const summaryCtx = document.getElementById('summaryChart');
   if (!summaryCtx) {
+    console.warn('Summary chart canvas not found');
     return;
   }
 
@@ -21,49 +27,65 @@ function initSummaryChart(data) {
   const reviewToApproval = validData.map((item) => item.reviewToApproval || 0);
   const approvalToMerge = validData.map((item) => item.approvalToMerge || 0);
 
-  new Chart(summaryCtx.getContext('2d'), {
-    type: 'bar',
-    data: {
-      labels: prNumbers.map((n) => `PR #${n}`),
-      datasets: [
-        {
-          label: 'Commit to Open',
-          data: commitToOpen,
-          backgroundColor: 'rgba(75, 192, 192, 0.6)',
-        },
-        {
-          label: 'Open to Review',
-          data: openToReview,
-          backgroundColor: 'rgba(255, 206, 86, 0.6)',
-        },
-        {
-          label: 'Review to Approval',
-          data: reviewToApproval,
-          backgroundColor: 'rgba(153, 102, 255, 0.6)',
-        },
-        {
-          label: 'Approval to Merge',
-          data: approvalToMerge,
-          backgroundColor: 'rgba(255, 99, 132, 0.6)',
-        },
-      ],
-    },
-    options: {
-      scales: {
-        x: { stacked: true },
-        y: { stacked: true, beginAtZero: true },
+  try {
+    const ctx = summaryCtx.getContext('2d');
+    if (!ctx) {
+      console.error('Could not get 2d context from canvas');
+      return;
+    }
+
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: prNumbers.map((n) => `PR #${n}`),
+        datasets: [
+          {
+            label: 'Commit to Open',
+            data: commitToOpen,
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+          },
+          {
+            label: 'Open to Review',
+            data: openToReview,
+            backgroundColor: 'rgba(255, 206, 86, 0.6)',
+          },
+          {
+            label: 'Review to Approval',
+            data: reviewToApproval,
+            backgroundColor: 'rgba(153, 102, 255, 0.6)',
+          },
+          {
+            label: 'Approval to Merge',
+            data: approvalToMerge,
+            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+          },
+        ],
       },
-      plugins: {
-        legend: { display: true, position: 'top' },
+      options: {
+        scales: {
+          x: { stacked: true },
+          y: { stacked: true, beginAtZero: true },
+        },
+        plugins: {
+          legend: { display: true, position: 'top' },
+        },
       },
-    },
-  });
+    });
+  } catch (error) {
+    console.error('Error creating summary chart:', error);
+    console.error('Error details:', error.message, error.stack);
+  }
 }
 
 /**
  * Initialize workflow chart for a single PR
  */
 function initWorkflowChart(prNumber, metrics) {
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js is not loaded');
+    return;
+  }
+
   if (!metrics || prNumber == null) {
     console.warn('Invalid metrics or prNumber for workflow chart');
     return;
@@ -72,45 +94,57 @@ function initWorkflowChart(prNumber, metrics) {
   const canvasId = `workflowChart-${prNumber}`;
   const canvas = document.getElementById(canvasId);
   if (!canvas) {
+    console.warn(`Canvas not found for PR #${prNumber}`);
     return;
   }
 
-  new Chart(canvas.getContext('2d'), {
-    type: 'bar',
-    data: {
-      labels: [
-        'Commit to Open',
-        'Open to Review',
-        'Review to Approval',
-        'Approval to Merge',
-      ],
-      datasets: [
-        {
-          label: 'Hours',
-          data: [
-            metrics.commitToOpen || 0,
-            metrics.openToReview || 0,
-            metrics.reviewToApproval || 0,
-            metrics.approvalToMerge || 0,
-          ],
-          backgroundColor: [
-            'rgba(75, 192, 192, 0.6)',
-            'rgba(255, 206, 86, 0.6)',
-            'rgba(153, 102, 255, 0.6)',
-            'rgba(255, 99, 132, 0.6)',
-          ],
+  try {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error(`Could not get 2d context from canvas for PR #${prNumber}`);
+      return;
+    }
+
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: [
+          'Commit to Open',
+          'Open to Review',
+          'Review to Approval',
+          'Approval to Merge',
+        ],
+        datasets: [
+          {
+            label: 'Hours',
+            data: [
+              metrics.commitToOpen || 0,
+              metrics.openToReview || 0,
+              metrics.reviewToApproval || 0,
+              metrics.approvalToMerge || 0,
+            ],
+            backgroundColor: [
+              'rgba(75, 192, 192, 0.6)',
+              'rgba(255, 206, 86, 0.6)',
+              'rgba(153, 102, 255, 0.6)',
+              'rgba(255, 99, 132, 0.6)',
+            ],
+          },
+        ],
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true },
         },
-      ],
-    },
-    options: {
-      scales: {
-        y: { beginAtZero: true },
+        plugins: {
+          legend: { display: false },
+        },
       },
-      plugins: {
-        legend: { display: false },
-      },
-    },
-  });
+    });
+  } catch (error) {
+    console.error(`Error creating workflow chart for PR #${prNumber}:`, error);
+    console.error('Error details:', error.message, error.stack);
+  }
 }
 
 /**
@@ -119,6 +153,7 @@ function initWorkflowChart(prNumber, metrics) {
 function initCharts() {
   const chartDataElement = document.getElementById('chart-data');
   if (!chartDataElement) {
+    console.warn('Chart data element not found');
     return;
   }
 
@@ -133,22 +168,31 @@ function initCharts() {
     
     // Handle both array and object with prs property
     const prsArray = Array.isArray(data) ? data : (data.prs || []);
-    
     if (!Array.isArray(prsArray) || prsArray.length === 0) {
       console.warn('No valid PR data found');
       return;
     }
 
-    // Filter out invalid items
-    const validPrs = prsArray.filter((item) => item && item.prNumber != null);
+    // Filter out invalid items (null, undefined, or missing prNumber)
+    const validPrs = prsArray.filter((item) => {
+      const isValid = item != null && typeof item === 'object' && item.prNumber != null;
+      if (!isValid) {
+        console.warn('Invalid PR item:', item);
+      }
+      return isValid;
+    });
 
     if (validPrs.length > 0) {
       initSummaryChart(validPrs);
+      
       validPrs.forEach((item) => {
         if (item && item.prNumber != null) {
+          const canvasId = `workflowChart-${item.prNumber}`;
           initWorkflowChart(item.prNumber, item);
         }
       });
+    } else {
+      console.warn('No valid PRs to display');
     }
   } catch (error) {
     console.error('Error initializing charts:', error);
@@ -156,11 +200,38 @@ function initCharts() {
   }
 }
 
-// Initialize charts when DOM is ready
+// Initialize charts when DOM is ready and Chart.js is loaded
+function waitForChartJS(retries = 50) {
+  if (retries <= 0) {
+    console.error('Chart.js failed to load after multiple attempts');
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'padding: 20px; background-color: #fee; color: #c00; margin: 20px; border: 2px solid #c00; border-radius: 5px;';
+    errorDiv.innerHTML = '<strong>Error:</strong> Chart.js library failed to load. Please check your internet connection or refresh the page.';
+    document.body.insertBefore(errorDiv, document.body.firstChild);
+    return;
+  }
+
+  if (typeof Chart !== 'undefined') {
+    // Wait for DOM to be fully ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(initCharts, 200);
+      });
+    } else {
+      // Small delay to ensure DOM is fully ready
+      setTimeout(initCharts, 200);
+    }
+  } else {
+    // Wait a bit and try again
+    setTimeout(() => waitForChartJS(retries - 1), 100);
+  }
+}
+
+// Start waiting for Chart.js when script loads
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initCharts);
+  document.addEventListener('DOMContentLoaded', () => waitForChartJS());
 } else {
-  initCharts();
+  waitForChartJS();
 }
 
 /**
@@ -222,7 +293,7 @@ async function openWorkflowModal(prNumber, prData) {
     }
 
     // Build timeline HTML
-    const timeline = buildSimpleTimeline(data.timeline || []);
+    const timeline = buildSimpleTimeline(data.timeline || [], data.validationIssues || []);
     timelineContainer.innerHTML = timeline;
   } catch (error) {
     console.error('Error fetching timeline:', error);
@@ -243,14 +314,17 @@ function closeWorkflowModal() {
 /**
  * Build simple timeline HTML
  */
-function buildSimpleTimeline(timelineItems) {
+function buildSimpleTimeline(timelineItems, validationIssues = []) {
   if (!timelineItems || timelineItems.length === 0) {
     return '<div style="padding: 20px; text-align: center; color: #999;">No timeline data available</div>';
   }
 
   const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
     const date = new Date(dateStr);
+    // Use GMT+7 timezone (Vietnam timezone)
     return date.toLocaleString('en-US', {
+      timeZone: 'Asia/Ho_Chi_Minh',
       hour: 'numeric',
       minute: '2-digit',
       month: 'short',
@@ -262,13 +336,51 @@ function buildSimpleTimeline(timelineItems) {
 
   let html = '<div class="simple-timeline">';
 
+  // Show validation issues if any
+  if (validationIssues && validationIssues.length > 0) {
+    const errorCount = validationIssues.filter(i => i.severity === 'error').length;
+    const warningCount = validationIssues.filter(i => i.severity === 'warning').length;
+    
+    html += `
+      <div style="margin-bottom: 20px; padding: 15px; border-radius: 5px; background-color: ${errorCount > 0 ? '#fee' : '#fff3cd'}; border-left: 4px solid ${errorCount > 0 ? '#dc3545' : '#ffc107'};">
+        <div style="font-weight: bold; margin-bottom: 10px; color: ${errorCount > 0 ? '#dc3545' : '#856404'};">
+          ⚠️ Workflow Validation Issues (${errorCount} errors, ${warningCount} warnings)
+        </div>
+        <div style="max-height: 200px; overflow-y: auto;">
+    `;
+    
+    validationIssues.forEach((issue, index) => {
+      const icon = issue.severity === 'error' ? '❌' : '⚠️';
+      const color = issue.severity === 'error' ? '#dc3545' : '#856404';
+      html += `
+        <div style="margin-bottom: 8px; padding: 8px; background-color: white; border-radius: 3px; border-left: 3px solid ${color};">
+          <div style="font-weight: bold; color: ${color}; margin-bottom: 4px;">
+            ${icon} ${issue.type.replace('_', ' ').toUpperCase()}
+          </div>
+          <div style="color: #333; font-size: 14px;">${issue.message}</div>
+          ${issue.details ? `<div style="color: #666; font-size: 12px; margin-top: 4px; font-style: italic;">${JSON.stringify(issue.details)}</div>` : ''}
+        </div>
+      `;
+    });
+    
+    html += `
+        </div>
+      </div>
+    `;
+  }
+
   timelineItems.forEach((item, index) => {
     const isLast = index === timelineItems.length - 1;
+    const titleHtml = item.url
+      ? `<a href="${item.url}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">${item.title}</a>`
+      : item.title;
+    const actorHtml = item.actor ? `<div class="timeline-event-actor">by ${item.actor}</div>` : '';
     html += `
       <div class="timeline-event ${isLast ? 'last' : ''}">
         <div class="timeline-event-content">
-          <div class="timeline-event-title">${item.title}</div>
+          <div class="timeline-event-title">${titleHtml}</div>
           <div class="timeline-event-time">${formatDate(item.time)}</div>
+          ${actorHtml}
         </div>
       </div>
     `;
@@ -334,7 +446,9 @@ function buildWorkflowTimeline(prData) {
 
   const formatDate = (date) => {
     if (!date) return 'N/A';
+    // Use GMT+7 timezone (Vietnam timezone)
     return date.toLocaleString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
