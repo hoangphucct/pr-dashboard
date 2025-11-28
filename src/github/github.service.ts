@@ -1,73 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
-
-interface GitHubCommit {
-  sha: string;
-  parents: Array<{ sha: string }>;
-  commit: {
-    author: {
-      date: string;
-    };
-    message: string;
-  };
-}
-
-interface GitHubReview {
-  id: number;
-  state: string;
-  submitted_at: string;
-  body: string;
-  user: {
-    login: string;
-  };
-}
-
-interface GitHubComment {
-  id: number;
-  created_at: string;
-  user: {
-    login: string;
-  };
-}
-
-interface GitHubLabel {
-  name: string;
-}
-
-interface GitHubPullRequest {
-  number: number;
-  title: string;
-  state: string;
-  draft: boolean;
-  html_url: string;
-  created_at: string;
-  updated_at: string;
-  merged_at: string | null;
-  labels?: GitHubLabel[];
-  base: {
-    sha: string;
-    ref: string;
-  };
-  head: {
-    sha: string;
-    ref: string;
-  };
-  user: {
-    login: string;
-  };
-}
-
-export interface GitHubPullRequestDetail extends GitHubPullRequest {
-  reviews: GitHubReview[];
-  comments: GitHubComment[];
-  review_comments: GitHubComment[];
-  commits: GitHubCommit[];
-  changed_files?: number;
-  additions?: number;
-  deletions?: number;
-  labels?: GitHubLabel[];
-}
+import type {
+  GitHubCommit,
+  GitHubLabel,
+  GitHubPullRequest,
+  GitHubPullRequestDetail,
+} from '../types/github.types';
 
 @Injectable()
 export class GitHubService {
@@ -107,13 +46,13 @@ export class GitHubService {
         this.apiClient.get<GitHubCommit[]>(
           `/repos/${this.owner}/${this.repo}/pulls/${prNumber}/commits`,
         ),
-        this.apiClient.get<GitHubReview[]>(
+        this.apiClient.get<GitHubPullRequestDetail['reviews']>(
           `/repos/${this.owner}/${this.repo}/pulls/${prNumber}/reviews`,
         ),
-        this.apiClient.get<GitHubComment[]>(
+        this.apiClient.get<GitHubPullRequestDetail['comments']>(
           `/repos/${this.owner}/${this.repo}/issues/${prNumber}/comments`,
         ),
-        this.apiClient.get<GitHubComment[]>(
+        this.apiClient.get<GitHubPullRequestDetail['review_comments']>(
           `/repos/${this.owner}/${this.repo}/pulls/${prNumber}/comments`,
         ),
         this.apiClient.get<{ labels?: GitHubLabel[] }>(

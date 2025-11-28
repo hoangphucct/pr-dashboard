@@ -8,6 +8,9 @@ import { GitHubService } from './github/github.service';
 import { StorageService } from './storage/storage.service';
 import { WorkflowStorageService } from './workflow/workflow-storage.service';
 import { WorkflowValidationService } from './workflow/workflow-validation.service';
+import { CommitService } from './commit/commit.service';
+import { TimelineService } from './timeline/timeline.service';
+import { BusinessDaysService } from './utils/business-days.service';
 
 @Module({
   imports: [
@@ -24,6 +27,9 @@ import { WorkflowValidationService } from './workflow/workflow-validation.servic
     StorageService,
     WorkflowStorageService,
     WorkflowValidationService,
+    CommitService,
+    TimelineService,
+    BusinessDaysService,
   ],
 })
 export class AppModule {}

@@ -20,6 +20,7 @@ export interface PrMetrics {
   approvalToMerge: number;
   createdAt: string;
   updatedAt: string;
+  labels?: Array<{ name: string; color?: string }>;
 }
 
 interface DailyData {
@@ -131,7 +132,7 @@ export class StorageService {
     try {
       const content = readFileSync(filePath, 'utf-8');
       const data = JSON.parse(content) as DailyData;
-      
+
       // Clean up any null/undefined values in prs array
       if (data.prs && Array.isArray(data.prs)) {
         data.prs = data.prs.filter(
@@ -143,7 +144,7 @@ export class StorageService {
             typeof pr.prNumber === 'number',
         );
       }
-      
+
       return data;
     } catch (error) {
       console.error("Error loading today's data:", error);
@@ -164,7 +165,7 @@ export class StorageService {
     try {
       const content = readFileSync(filePath, 'utf-8');
       const data = JSON.parse(content) as DailyData;
-      
+
       // Clean up any null/undefined values in prs array
       if (data.prs && Array.isArray(data.prs)) {
         data.prs = data.prs.filter(
@@ -176,7 +177,7 @@ export class StorageService {
             typeof pr.prNumber === 'number',
         );
       }
-      
+
       return data;
     } catch (error) {
       console.error('Error loading data for date:', date, error);

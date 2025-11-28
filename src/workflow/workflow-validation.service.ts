@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { TimelineItem, WorkflowData } from './workflow-storage.service';
+import type { WorkflowData } from './workflow-storage.service';
 
 export interface ValidationIssue {
   type: 'missing_step' | 'wrong_order' | 'abnormal_time';
@@ -72,7 +72,9 @@ export class WorkflowValidationService {
       });
     } else {
       // Check if commit has "Work has started on the" message
-      const commitItems = workflow.timeline.filter((item) => item.type === 'commit');
+      const commitItems = workflow.timeline.filter(
+        (item) => item.type === 'commit',
+      );
       const hasWorkStartedCommit = commitItems.some((item) =>
         item.title?.toLowerCase().startsWith('work has started on the'),
       );
@@ -81,7 +83,8 @@ export class WorkflowValidationService {
         issues.push({
           type: 'missing_step',
           severity: 'error',
-          message: 'Missing "Work has started on the" commit - Workflow is incorrect',
+          message:
+            'Missing "Work has started on the" commit - Workflow is incorrect',
           details: {
             commitTitles: commitItems.map((item) => item.title),
           },

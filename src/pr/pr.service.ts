@@ -1,28 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { GitHubService } from '../github/github.service';
+import { CommitService } from '../commit/commit.service';
+import { BusinessDaysService } from '../utils/business-days.service';
 import type { PrMetrics } from '../storage/storage.service';
-import type { GitHubPullRequestDetail } from '../github/github.service';
-
-interface GitHubEvent {
-  event: string;
-  created_at: string;
-}
-
-interface GitHubReview {
-  state: string;
-  submitted_at: string;
-  created_at: string;
-  body?: string;
-}
-
-interface GitHubComment {
-  submitted_at?: string;
-  created_at?: string;
-}
+import type {
+  GitHubPullRequestDetail,
+  GitHubEvent,
+} from '../types/github.types';
 
 @Injectable()
 export class PrService {
-  constructor(private readonly githubService: GitHubService) {}
+  constructor(
+    private readonly githubService: GitHubService,
+    private readonly commitService: CommitService,
+    private readonly businessDaysService: BusinessDaysService,
+  ) {}
 
   /**
    * Calculate cycle time metrics for multiple PRs
@@ -67,11 +59,14 @@ export class PrService {
         approvalToMerge: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        labels: prDetails.labels?.map((label) => ({
+          name: label.name,
+          color: label.color,
+        })),
       };
     }
-
     const commitToOpen = this.calculateCommitToOpen(prDetails, events);
-    const openToReview = this.calculateOpenToReview(prDetails);
+    const openToReview = this.calculateOpenToReview(prDetails, events);
     const reviewToApproval = this.calculateReviewToApproval(prDetails);
     const approvalToMerge = this.calculateApprovalToMerge(prDetails);
 
@@ -87,6 +82,10 @@ export class PrService {
       approvalToMerge,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      labels: prDetails.labels?.map((label) => ({
+        name: label.name,
+        color: label.color,
+      })),
     };
   }
 
@@ -101,37 +100,25 @@ export class PrService {
       return 0;
     }
 
-    const sortedCommits = [...prDetails.commits].sort(
-      (a, b) =>
-        new Date(a.commit.author.date).getTime() -
-        new Date(b.commit.author.date).getTime(),
-    );
-
-    // Filter out merge commits to get the actual first work commit
-    const nonMergeCommits = sortedCommits.filter((commit) => {
-      const message = commit.commit.message.toLowerCase();
-      return (
-        !message.startsWith('merge pull request') &&
-        !message.startsWith('merge branch') &&
-        !message.startsWith('merge ') &&
-        (!commit.parents || commit.parents.length <= 1)
-      );
-    });
-
-    // Priority 1: Find commit with "Work has started on the" message
-    const workStartedCommit = nonMergeCommits.find((commit) =>
-      commit.commit.message.toLowerCase().startsWith('work has started on the'),
-    );
-
-    // Priority 2: Use first non-merge commit, or first commit if all are merge commits
-    const firstCommit = workStartedCommit ||
-      (nonMergeCommits.length > 0 ? nonMergeCommits[0] : sortedCommits[0]);
-    
-    const firstCommitDate = new Date(firstCommit.commit.author.date).getTime();
-    
-    if (!workStartedCommit) {
-      console.warn(`WARNING - No "Work has started on the" commit found in calculateCommitToOpen!`);
+    const firstCommit = this.commitService.getFirstCommit(prDetails.commits);
+    if (!firstCommit) {
+      return 0;
     }
+
+    const workStartedCommit = this.commitService.findWorkStartedCommit(
+      this.commitService.filterNonMergeCommits(
+        this.commitService.sortCommitsByDate(prDetails.commits),
+      ),
+    );
+    if (!workStartedCommit) {
+      console.warn(
+        `WARNING - No "Work has started on the" commit found in calculateCommitToOpen!`,
+      );
+    }
+
+    const firstCommitDate = new Date(
+      firstCommit.commit.committer.date,
+    ).getTime();
 
     const allEvents = (events || []) as GitHubEvent[];
 
@@ -157,19 +144,52 @@ export class PrService {
       readyForReviewDate = new Date(prDetails.created_at).getTime();
     }
 
-    const diffMs = readyForReviewDate - firstCommitDate;
-    return Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
+    // Calculate business hours between specific timestamps
+    const startDate = new Date(firstCommitDate);
+    const endDate = new Date(readyForReviewDate);
+    const businessHours = this.businessDaysService.calculateBusinessHours(
+      startDate,
+      endDate,
+    );
+
+    return Math.round(businessHours * 100) / 100;
   }
 
   /**
-   * Calculate time from PR open to first review comment
+   * Calculate time from "ready for review" to first review comment
    * Priority: review comments (reviews with state COMMENTED) > review_comments > issue comments
    */
-  calculateOpenToReview(prDetails: GitHubPullRequestDetail): number {
-    const prOpenedDate = new Date(prDetails.created_at).getTime();
+  calculateOpenToReview(
+    prDetails: GitHubPullRequestDetail,
+    events: unknown[],
+  ): number {
+    const allEvents = (events || []) as GitHubEvent[];
 
-    const reviews = (prDetails.reviews || []) as unknown as GitHubReview[];
-    const reviewComments = (prDetails.review_comments || []) as GitHubComment[];
+    // Find ready_for_review event (or fallback to PR created_at)
+    const readyForReviewEvent = allEvents.find(
+      (event) => event.event === 'ready_for_review',
+    );
+
+    const openedEvents = allEvents.filter(
+      (event) => event.event === 'opened' || event.event === 'reopened',
+    );
+
+    let readyForReviewDate: number;
+
+    if (readyForReviewEvent) {
+      readyForReviewDate = new Date(readyForReviewEvent.created_at).getTime();
+    } else if (openedEvents.length > 0) {
+      const sortedOpenedEvents = [...openedEvents].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+      readyForReviewDate = new Date(sortedOpenedEvents[0].created_at).getTime();
+    } else {
+      readyForReviewDate = new Date(prDetails.created_at).getTime();
+    }
+
+    const reviews = prDetails.reviews || [];
+    const reviewComments = prDetails.review_comments || [];
 
     // Priority 1: Reviews with state COMMENTED (overall review comments)
     const reviewCommentsWithState = reviews.filter(
@@ -182,38 +202,48 @@ export class PrService {
 
     // Priority 2: Review comments (inline comments on code)
     const inlineReviewComments = reviewComments.filter(
-      (comment) => comment.created_at || comment.submitted_at,
+      (comment) => comment.created_at,
     );
 
-    // Combine with priority: review comments first, then inline review comments
-    const allReviewComments: Array<GitHubReview | GitHubComment> = [
-      ...reviewCommentsWithState,
-      ...inlineReviewComments,
-    ].filter((item) => item.submitted_at || item.created_at);
+    // Collect all review dates
+    const reviewDates: number[] = [];
 
-    if (allReviewComments.length === 0) {
+    // Add review comments with state dates
+    reviewCommentsWithState.forEach((review) => {
+      if (review.submitted_at) {
+        reviewDates.push(new Date(review.submitted_at).getTime());
+      }
+    });
+
+    // Add inline review comments dates
+    inlineReviewComments.forEach((comment) => {
+      if (comment.created_at) {
+        reviewDates.push(new Date(comment.created_at).getTime());
+      }
+    });
+
+    if (reviewDates.length === 0) {
       return 0;
     }
 
-    const firstReviewDate = Math.min(
-      ...allReviewComments.map((comment) => {
-        const dateStr =
-          'submitted_at' in comment && comment.submitted_at
-            ? comment.submitted_at
-            : comment.created_at || '';
-        return new Date(dateStr).getTime();
-      }),
+    const firstReviewDate = Math.min(...reviewDates);
+
+    // Calculate business hours between specific timestamps
+    const startDate = new Date(readyForReviewDate);
+    const endDate = new Date(firstReviewDate);
+    const businessHours = this.businessDaysService.calculateBusinessHours(
+      startDate,
+      endDate,
     );
 
-    const diffMs = firstReviewDate - prOpenedDate;
-    return Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
+    return Math.round(businessHours * 100) / 100;
   }
 
   /**
    * Calculate time from first review comment to last approval
    */
   calculateReviewToApproval(prDetails: GitHubPullRequestDetail): number {
-    const reviews = (prDetails.reviews || []) as unknown as GitHubReview[];
+    const reviews = prDetails.reviews || [];
     const allReviews = reviews.filter((review) => review.submitted_at);
 
     if (allReviews.length === 0) {
@@ -236,15 +266,22 @@ export class PrService {
       ...approvals.map((review) => new Date(review.submitted_at).getTime()),
     );
 
-    const diffMs = lastApprovalDate - firstReviewDate;
-    return Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
+    // Calculate business hours between specific timestamps
+    const startDate = new Date(firstReviewDate);
+    const endDate = new Date(lastApprovalDate);
+    const businessHours = this.businessDaysService.calculateBusinessHours(
+      startDate,
+      endDate,
+    );
+
+    return Math.round(businessHours * 100) / 100;
   }
 
   /**
    * Calculate time from last approval to merge
    */
   calculateApprovalToMerge(prDetails: GitHubPullRequestDetail): number {
-    const reviews = (prDetails.reviews || []) as unknown as GitHubReview[];
+    const reviews = prDetails.reviews || [];
     const approvals = reviews.filter(
       (review) => review.state === 'APPROVED' && review.submitted_at,
     );
@@ -259,8 +296,15 @@ export class PrService {
 
     const mergedDate = new Date(prDetails.merged_at).getTime();
 
-    const diffMs = mergedDate - lastApprovalDate;
-    return Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
+    // Calculate business hours between specific timestamps
+    const startDate = new Date(lastApprovalDate);
+    const endDate = new Date(mergedDate);
+    const businessHours = this.businessDaysService.calculateBusinessHours(
+      startDate,
+      endDate,
+    );
+
+    return Math.round(businessHours * 100) / 100;
   }
 
   /**

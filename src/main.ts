@@ -17,7 +17,7 @@ async function bootstrap() {
     if (context === null || context === undefined) {
       return 'null';
     }
-    
+
     // If it's an array, filter out null/undefined values
     if (Array.isArray(context)) {
       const filtered = context.filter(
@@ -29,7 +29,7 @@ async function bootstrap() {
       );
       return JSON.stringify(filtered);
     }
-    
+
     return JSON.stringify(context);
   });
 
@@ -44,6 +44,39 @@ async function bootstrap() {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   hbs.default.registerHelper('gt', (a: unknown, b: unknown) => {
     return Number(a) > Number(b);
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+  hbs.default.registerHelper('parseInt', (str: unknown, radix: unknown) => {
+    const s = typeof str === 'string' ? str : '';
+    const r = typeof radix === 'number' ? radix : 10;
+    return Number.parseInt(s, r);
+  });
+
+  // Helper to determine text color based on background color brightness
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+  hbs.default.registerHelper('labelTextColor', (color: unknown) => {
+    const hexColor = typeof color === 'string' ? color : 'ffffff';
+    const hex = hexColor.replace('#', '');
+    const r = Number.parseInt(hex.substring(0, 2), 16);
+    const g = Number.parseInt(hex.substring(2, 4), 16);
+    const b = Number.parseInt(hex.substring(4, 6), 16);
+    // Calculate relative luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    // Use white text for dark backgrounds, black for light backgrounds
+    return luminance > 0.5 ? '#000' : '#fff';
+  });
+
+  // Helper to format time with business days
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+  hbs.default.registerHelper('formatTimeWithDays', (hours: unknown) => {
+    const h = Number.parseInt(hours as string, 10);
+    if (h <= 0) {
+      return '0h';
+    }
+    // 24 hours per business day
+    const days = Math.round((h / 24) * 10) / 10;
+    return `${h.toFixed(2)}h (${days}d)`;
   });
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
@@ -74,4 +107,4 @@ async function bootstrap() {
   void app.listen(process.env.PORT ?? 3000);
   console.log(`Server is running on port ${process.env.PORT ?? 3000}`);
 }
-(async () => await bootstrap())();
+void bootstrap();

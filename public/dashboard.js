@@ -35,42 +35,42 @@ function initSummaryChart(data) {
     }
 
     const chart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: prNumbers.map((n) => `PR #${n}`),
-        datasets: [
-          {
-            label: 'Commit to Open',
-            data: commitToOpen,
-            backgroundColor: 'rgba(75, 192, 192, 0.6)',
-          },
-          {
-            label: 'Open to Review',
-            data: openToReview,
-            backgroundColor: 'rgba(255, 206, 86, 0.6)',
-          },
-          {
-            label: 'Review to Approval',
-            data: reviewToApproval,
-            backgroundColor: 'rgba(153, 102, 255, 0.6)',
-          },
-          {
-            label: 'Approval to Merge',
-            data: approvalToMerge,
-            backgroundColor: 'rgba(255, 99, 132, 0.6)',
-          },
-        ],
-      },
-      options: {
-        scales: {
-          x: { stacked: true },
-          y: { stacked: true, beginAtZero: true },
+    type: 'bar',
+    data: {
+      labels: prNumbers.map((n) => `PR #${n}`),
+      datasets: [
+        {
+          label: 'Commit to Open',
+          data: commitToOpen,
+          backgroundColor: 'rgba(75, 192, 192, 0.6)',
         },
-        plugins: {
-          legend: { display: true, position: 'top' },
+        {
+          label: 'Open to Review',
+          data: openToReview,
+          backgroundColor: 'rgba(255, 206, 86, 0.6)',
         },
+        {
+          label: 'Review to Approval',
+          data: reviewToApproval,
+          backgroundColor: 'rgba(153, 102, 255, 0.6)',
+        },
+        {
+          label: 'Approval to Merge',
+          data: approvalToMerge,
+          backgroundColor: 'rgba(255, 99, 132, 0.6)',
+        },
+      ],
+    },
+    options: {
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, beginAtZero: true },
       },
-    });
+      plugins: {
+        legend: { display: true, position: 'top' },
+      },
+    },
+  });
   } catch (error) {
     console.error('Error creating summary chart:', error);
     console.error('Error details:', error.message, error.stack);
@@ -106,41 +106,41 @@ function initWorkflowChart(prNumber, metrics) {
     }
 
     const chart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: [
-          'Commit to Open',
-          'Open to Review',
-          'Review to Approval',
-          'Approval to Merge',
-        ],
-        datasets: [
-          {
-            label: 'Hours',
-            data: [
-              metrics.commitToOpen || 0,
-              metrics.openToReview || 0,
-              metrics.reviewToApproval || 0,
-              metrics.approvalToMerge || 0,
-            ],
-            backgroundColor: [
-              'rgba(75, 192, 192, 0.6)',
-              'rgba(255, 206, 86, 0.6)',
-              'rgba(153, 102, 255, 0.6)',
-              'rgba(255, 99, 132, 0.6)',
-            ],
-          },
-        ],
-      },
-      options: {
-        scales: {
-          y: { beginAtZero: true },
+    type: 'bar',
+    data: {
+      labels: [
+        'Commit to Open',
+        'Open to Review',
+        'Review to Approval',
+        'Approval to Merge',
+      ],
+      datasets: [
+        {
+          label: 'Hours',
+          data: [
+            metrics.commitToOpen || 0,
+            metrics.openToReview || 0,
+            metrics.reviewToApproval || 0,
+            metrics.approvalToMerge || 0,
+          ],
+          backgroundColor: [
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(153, 102, 255, 0.6)',
+            'rgba(255, 99, 132, 0.6)',
+          ],
         },
-        plugins: {
-          legend: { display: false },
-        },
+      ],
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true },
       },
-    });
+      plugins: {
+        legend: { display: false },
+      },
+    },
+  });
   } catch (error) {
     console.error(`Error creating workflow chart for PR #${prNumber}:`, error);
     console.error('Error details:', error.message, error.stack);

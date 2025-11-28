@@ -16,7 +16,7 @@ body {
   background: white;
   padding: 30px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
@@ -87,7 +87,8 @@ table {
   font-size: 14px;
 }
 
-th, td {
+th,
+td {
   border: 1px solid #ddd;
   padding: 12px;
   text-align: center;
@@ -271,10 +272,13 @@ a:hover {
 
 .timeline-event {
   position: relative;
+}
+
+.timeline-event:not(.last) {
   padding-bottom: 30px;
 }
 
-.timeline-event:not(.last)::after {
+.timeline-event::after {
   content: '';
   position: absolute;
   left: -30px;
@@ -296,6 +300,10 @@ a:hover {
   border: 3px solid white;
   box-shadow: 0 0 0 2px #007bff;
   z-index: 1;
+}
+
+.timeline-event.last::before {
+  top: calc(50% - 10px);
 }
 
 .timeline-event-content {
@@ -407,3 +415,52 @@ a:hover {
   margin-top: 5px;
 }
 
+/* Update All PRs Button Styles */
+.update-all-section {
+  margin-top: 15px;
+}
+
+.update-all-form {
+  display: inline;
+}
+
+.btn-update-all {
+  background-color: #28a745;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-update-all:hover {
+  background-color: #218838;
+}
+
+/* Title Cell Styles */
+.title-cell {
+  vertical-align: top;
+}
+
+.title-content {
+  margin-bottom: 4px;
+}
+
+/* PR Labels Styles */
+.pr-labels {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pr-label {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}

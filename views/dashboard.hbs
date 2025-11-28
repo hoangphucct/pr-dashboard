@@ -20,15 +20,13 @@
         </div>
         <button type="submit">Get Data</button>
       </form>
-      {{#if hasData}}
-      <div style="margin-top: 15px;">
-        <form method="POST" action="/dashboard/update-all-today" style="display: inline;">
-          <button type="submit" style="background-color: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+      <div class="update-all-section">
+        <form method="POST" action="/dashboard/update-all-today" class="update-all-form">
+          <button type="submit" class="btn-update-all">
             Update All PRs for Today
           </button>
         </form>
       </div>
-      {{/if}}
     </div>
 
     <!-- Date selector -->
@@ -67,10 +65,23 @@
           <tr>
             <td><strong>#{{prNumber}}</strong></td>
             <td class="title-cell">
-              {{#if url}}
-                <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{title}}</a>
-              {{else}}
-                {{title}}
+              <div class="title-content">
+                {{#if url}}
+                  <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{title}}</a>
+                {{else}}
+                  {{title}}
+                {{/if}}
+              </div>
+              {{#if labels}}
+                {{#if (gt (length labels) 0)}}
+                  <div class="pr-labels">
+                    {{#each labels}}
+                      <span class="pr-label" style="background-color: #{{color}}; color: {{labelTextColor color}};">
+                        {{name}}
+                      </span>
+                    {{/each}}
+                  </div>
+                {{/if}}
               {{/if}}
             </td>
             <td>{{author}}</td>
@@ -83,12 +94,12 @@
                 status-unknown{{/if}}{{/if}}{{/if}}{{/if}}
               ">{{status}}</span>
             </td>
-            <td>{{commitToOpen}}</td>
-            <td>{{openToReview}}</td>
-            <td>{{reviewToApproval}}</td>
-            <td>{{approvalToMerge}}</td>
-            <td><strong>{{add openToReview reviewToApproval approvalToMerge}}</strong></td>
-            <td><strong>{{add commitToOpen openToReview reviewToApproval approvalToMerge}}</strong></td>
+            <td>{{formatTimeWithDays commitToOpen}}</td>
+            <td>{{formatTimeWithDays openToReview}}</td>
+            <td>{{formatTimeWithDays reviewToApproval}}</td>
+            <td>{{formatTimeWithDays approvalToMerge}}</td>
+            <td><strong>{{formatTimeWithDays (add openToReview reviewToApproval approvalToMerge)}}</strong></td>
+            <td><strong>{{formatTimeWithDays (add commitToOpen openToReview reviewToApproval approvalToMerge)}}</strong></td>
             <td>
               <button class="btn-workflow" data-pr-number="{{prNumber}}" data-pr-data='{{{json this}}}' onclick="openWorkflowModalFromButton(this)">View Details</button>
             </td>
