@@ -43,6 +43,7 @@ export class PrDataHelper {
       createdAt: pr.createdAt || new Date().toISOString(),
       updatedAt: pr.updatedAt || new Date().toISOString(),
       labels: pr.labels || [],
+      hasForcePushed: pr.hasForcePushed || false,
     };
   }
 

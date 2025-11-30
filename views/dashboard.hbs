@@ -66,10 +66,13 @@
             <td><strong>#{{prNumber}}</strong></td>
             <td class="title-cell">
               <div class="title-content">
-                {{#if url}}
-                  <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{title}}</a>
-                {{else}}
-                  {{title}}
+              {{#if url}}
+                <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{title}}</a>
+              {{else}}
+                {{title}}
+                {{/if}}
+                {{#if hasForcePushed}}
+                  <span class="force-pushed-badge" title="This PR has been force-pushed">⚠️ Force Pushed</span>
                 {{/if}}
               </div>
               {{#if labels}}
@@ -136,7 +139,7 @@
   <script src="/dashboard.js"></script>
 
   <!-- Workflow Modal -->
-  <div id="workflowModal" class="modal">
+  <div id="workflowModal" class="modal modal-hidden">
     <div class="modal-content">
       <div class="modal-header">
         <h2 id="modalTitle">PR Workflow Details</h2>

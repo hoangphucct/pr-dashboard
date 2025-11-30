@@ -55,9 +55,13 @@ export class BusinessDaysService {
     const end = new Date(endDate);
 
     // If same day and it's a business day
-    if (start.toDateString() === end.toDateString() && this.isBusinessDay(start)) {
+    if (
+      start.toDateString() === end.toDateString() &&
+      this.isBusinessDay(start)
+    ) {
       const diffMs = end.getTime() - start.getTime();
-      return diffMs / (1000 * 60 * 60);
+      const hours = diffMs / (1000 * 60 * 60);
+      return hours;
     }
 
     // Calculate hours for the start day (if business day)

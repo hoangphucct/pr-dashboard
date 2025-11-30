@@ -47,6 +47,12 @@ export class PrService {
 
     // If PR is Draft, return 0 for all metrics (only start calculating when opened or merged)
     if (status === 'Draft') {
+      // Check if PR has force-pushed events (even for Draft)
+      const allEvents = (events || []) as GitHubEvent[];
+      const hasForcePushed = allEvents.some(
+        (event) => event.event === 'head_ref_force_pushed',
+      );
+
       return {
         prNumber,
         title: prDetails.title || `PR #${prNumber}`,
@@ -63,12 +69,19 @@ export class PrService {
           name: label.name,
           color: label.color,
         })),
+        hasForcePushed,
       };
     }
     const commitToOpen = this.calculateCommitToOpen(prDetails, events);
     const openToReview = this.calculateOpenToReview(prDetails, events);
     const reviewToApproval = this.calculateReviewToApproval(prDetails);
     const approvalToMerge = this.calculateApprovalToMerge(prDetails);
+
+    // Check if PR has force-pushed events
+    const allEvents = (events || []) as GitHubEvent[];
+    const hasForcePushed = allEvents.some(
+      (event) => event.event === 'head_ref_force_pushed',
+    );
 
     return {
       prNumber,
@@ -86,6 +99,7 @@ export class PrService {
         name: label.name,
         color: label.color,
       })),
+      hasForcePushed,
     };
   }
 
@@ -152,6 +166,7 @@ export class PrService {
       endDate,
     );
 
+    // Round to 2 decimal places
     return Math.round(businessHours * 100) / 100;
   }
 
@@ -236,7 +251,9 @@ export class PrService {
       endDate,
     );
 
-    return Math.round(businessHours * 100) / 100;
+    // Round to 2 decimal places
+    const rounded = Math.round(businessHours * 100) / 100;
+    return rounded;
   }
 
   /**
@@ -274,7 +291,9 @@ export class PrService {
       endDate,
     );
 
-    return Math.round(businessHours * 100) / 100;
+    // Round to 2 decimal places
+    const rounded = Math.round(businessHours * 100) / 100;
+    return rounded;
   }
 
   /**
@@ -304,7 +323,9 @@ export class PrService {
       endDate,
     );
 
-    return Math.round(businessHours * 100) / 100;
+    // Round to 2 decimal places
+    const rounded = Math.round(businessHours * 100) / 100;
+    return rounded;
   }
 
   /**

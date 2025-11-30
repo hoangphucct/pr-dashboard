@@ -56,6 +56,9 @@ export class TimelineService {
     // Add review_requested events
     this.addReviewRequestedEvents(sortedEvents, prUrl, timelineItems);
 
+    // Add force-pushed events
+    this.addForcePushedEvents(sortedEvents, owner, repo, prUrl, timelineItems);
+
     // Add reviews
     this.addReviews(prDetails, prUrl, timelineItems);
 
@@ -312,6 +315,66 @@ export class TimelineService {
           url: reviewUrl,
         });
       }
+    });
+  }
+
+  /**
+   * Add force-pushed events to timeline with detailed information
+   */
+  private addForcePushedEvents(
+    sortedEvents: GitHubEvent[],
+    owner: string,
+    repo: string,
+    prUrl: string,
+    timelineItems: TimelineItem[],
+  ): void {
+    const forcePushedEvents = sortedEvents.filter(
+      (e) => e.event === 'head_ref_force_pushed',
+    );
+    forcePushedEvents.forEach((event, index) => {
+      // Build detailed title with commit information
+      const commitSha = event.commit_id || event.after || null;
+      const beforeSha = event.before || null;
+      let title = 'Force pushed';
+      let description: string | undefined;
+
+      // Add commit SHA information if available
+      if (commitSha) {
+        const shortSha = commitSha.substring(0, 7);
+        title = `Force pushed to ${shortSha}`;
+
+        // Build description with before/after information
+        const details: string[] = [];
+        if (beforeSha) {
+          const shortBeforeSha = beforeSha.substring(0, 7);
+          details.push(`Before: ${shortBeforeSha}`);
+        }
+        details.push(`After: ${shortSha}`);
+        if (event.ref) {
+          details.push(`Branch: ${event.ref}`);
+        }
+        description = details.join(' • ');
+      } else if (forcePushedEvents.length > 1) {
+        // If multiple force pushes, number them
+        title = `Force pushed (${index + 1})`;
+      }
+
+      // Build URL - prefer commit URL, then event URL
+      let eventUrl: string | undefined = prUrl;
+      if (commitSha && owner && repo) {
+        eventUrl = this.commitService.buildCommitUrl(owner, repo, commitSha);
+      } else if (event.id) {
+        eventUrl = `${prUrl}#event-${event.id}`;
+      }
+
+      timelineItems.push({
+        type: 'force_pushed',
+        title,
+        time: event.created_at,
+        actor: event.actor?.login,
+        url: eventUrl,
+        description,
+      });
     });
   }
 

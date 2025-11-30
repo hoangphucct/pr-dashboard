@@ -1,4 +1,26 @@
 /**
+ * Timeline event type configuration
+ */
+const TIMELINE_EVENT_CONFIG = {
+  commit: { icon: '📝', color: '#28a745' },
+  ready_for_review: { icon: '👁️', color: '#17a2b8' },
+  comment: { icon: '💬', color: '#6c757d' },
+  review_comment: { icon: '💬', color: '#6c757d' },
+  review_requested: { icon: '👤', color: '#ffc107' },
+  force_pushed: { icon: '⚠️', color: '#ff9800' },
+  approved: { icon: '✅', color: '#28a745' },
+  merged: { icon: '🔀', color: '#6f42c1' },
+  default: { icon: '●', color: '#007bff' },
+};
+
+/**
+ * Get timeline event configuration
+ */
+function getTimelineEventConfig(type) {
+  return TIMELINE_EVENT_CONFIG[type] || TIMELINE_EVENT_CONFIG.default;
+}
+
+/**
  * Initialize summary chart with PR cycle time data
  */
 function initSummaryChart(data) {
@@ -167,7 +189,7 @@ function initCharts() {
     const data = JSON.parse(rawData);
     
     // Handle both array and object with prs property
-    const prsArray = Array.isArray(data) ? data : (data.prs || []);
+    const prsArray = Array.isArray(data) ? data : data.prs || [];
     if (!Array.isArray(prsArray) || prsArray.length === 0) {
       console.warn('No valid PR data found');
       return;
@@ -175,38 +197,51 @@ function initCharts() {
 
     // Filter out invalid items (null, undefined, or missing prNumber)
     const validPrs = prsArray.filter((item) => {
-      const isValid = item != null && typeof item === 'object' && item.prNumber != null;
+      const isValid =
+        item != null &&
+        typeof item === 'object' &&
+        item.prNumber != null;
       if (!isValid) {
         console.warn('Invalid PR item:', item);
       }
       return isValid;
     });
 
-    if (validPrs.length > 0) {
+    if (validPrs.length === 0) {
+      console.warn('No valid PRs to display');
+      return;
+    }
+
       initSummaryChart(validPrs);
-      
+
       validPrs.forEach((item) => {
         if (item && item.prNumber != null) {
-          const canvasId = `workflowChart-${item.prNumber}`;
           initWorkflowChart(item.prNumber, item);
         }
       });
-    } else {
-      console.warn('No valid PRs to display');
-    }
   } catch (error) {
     console.error('Error initializing charts:', error);
     console.error('Chart data element content:', chartDataElement.textContent);
   }
 }
 
-// Initialize charts when DOM is ready and Chart.js is loaded
+/**
+ * Create chart error message element
+ */
+function createChartErrorMessage() {
+  const errorDiv = document.createElement('div');
+  errorDiv.className = 'chart-error-message';
+  errorDiv.innerHTML = '<strong>Error:</strong> Chart.js library failed to load. Please check your internet connection or refresh the page.';
+  return errorDiv;
+}
+
+/**
+ * Initialize charts when DOM is ready and Chart.js is loaded
+ */
 function waitForChartJS(retries = 50) {
   if (retries <= 0) {
     console.error('Chart.js failed to load after multiple attempts');
-    const errorDiv = document.createElement('div');
-    errorDiv.style.cssText = 'padding: 20px; background-color: #fee; color: #c00; margin: 20px; border: 2px solid #c00; border-radius: 5px;';
-    errorDiv.innerHTML = '<strong>Error:</strong> Chart.js library failed to load. Please check your internet connection or refresh the page.';
+    const errorDiv = createChartErrorMessage();
     document.body.insertBefore(errorDiv, document.body.firstChild);
     return;
   }
@@ -238,6 +273,11 @@ if (document.readyState === 'loading') {
  * Open workflow modal from button click
  */
 function openWorkflowModalFromButton(button) {
+  if (!button) {
+    console.error('Button element is required');
+    return;
+  }
+
   const prNumber = button.getAttribute('data-pr-number');
   const prDataStr = button.getAttribute('data-pr-data');
 
@@ -248,7 +288,7 @@ function openWorkflowModalFromButton(button) {
 
   const prNum = Number.parseInt(prNumber, 10);
   if (Number.isNaN(prNum)) {
-    console.error('Invalid PR number');
+    console.error('Invalid PR number:', prNumber);
     return;
   }
 
@@ -273,31 +313,40 @@ async function openWorkflowModal(prNumber, prData) {
   const timelineContainer = document.getElementById('workflowTimeline');
 
   if (!modal || !modalTitle || !timelineContainer) {
+    console.error('Required modal elements not found');
     return;
   }
 
-  modalTitle.textContent = `PR #${prNumber} - ${prData?.title || 'Workflow Details'}`;
-  modal.style.display = 'block';
+  const title = prData?.title || 'Workflow Details';
+  modalTitle.textContent = `PR #${prNumber} - ${title}`;
+  modal.classList.add('modal-visible');
+  modal.classList.remove('modal-hidden');
 
   // Show loading
-  timelineContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Loading timeline...</div>';
+  timelineContainer.innerHTML = '<div class="timeline-loading">Loading timeline...</div>';
 
   try {
-    // Fetch timeline from API
     const response = await fetch(`/dashboard/timeline/${prNumber}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     const data = await response.json();
 
     if (data.error) {
-      timelineContainer.innerHTML = `<div style="color: red; padding: 20px;">Error: ${data.error}</div>`;
+      timelineContainer.innerHTML = `<div class="timeline-error">Error: ${data.error}</div>`;
       return;
     }
 
-    // Build timeline HTML
-    const timeline = buildSimpleTimeline(data.timeline || [], data.validationIssues || []);
+    const timeline = buildSimpleTimeline(
+      data.timeline || [],
+      data.validationIssues || [],
+    );
     timelineContainer.innerHTML = timeline;
   } catch (error) {
     console.error('Error fetching timeline:', error);
-    timelineContainer.innerHTML = '<div style="color: red; padding: 20px;">Failed to load timeline</div>';
+    timelineContainer.innerHTML =
+      '<div class="timeline-error">Failed to load timeline</div>';
   }
 }
 
@@ -307,24 +356,19 @@ async function openWorkflowModal(prNumber, prData) {
 function closeWorkflowModal() {
   const modal = document.getElementById('workflowModal');
   if (modal) {
-    modal.style.display = 'none';
+    modal.classList.add('modal-hidden');
+    modal.classList.remove('modal-visible');
   }
 }
 
 /**
- * Build simple timeline HTML
+ * Format date string to local timezone (GMT+7)
  */
-function buildSimpleTimeline(timelineItems, validationIssues = []) {
-  if (!timelineItems || timelineItems.length === 0) {
-    return '<div style="padding: 20px; text-align: center; color: #999;">No timeline data available</div>';
-  }
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
+function formatTimelineDate(dateStr) {
+  if (!dateStr) return 'N/A';
     const date = new Date(dateStr);
-    // Use GMT+7 timezone (Vietnam timezone)
     return date.toLocaleString('en-US', {
-      timeZone: 'Asia/Ho_Chi_Minh',
+    timeZone: 'Asia/Ho_Chi_Minh',
       hour: 'numeric',
       minute: '2-digit',
       month: 'short',
@@ -332,58 +376,114 @@ function buildSimpleTimeline(timelineItems, validationIssues = []) {
       year: 'numeric',
       hour12: true,
     });
-  };
+}
+
+/**
+ * Build validation issues HTML
+ */
+function buildValidationIssuesHTML(validationIssues) {
+  if (!validationIssues || validationIssues.length === 0) {
+    return '';
+  }
+
+  const errorCount = validationIssues.filter(
+    (i) => i.severity === 'error',
+  ).length;
+  const warningCount = validationIssues.filter(
+    (i) => i.severity === 'warning',
+  ).length;
+  const containerClass = errorCount > 0 ? 'error' : 'warning';
+
+  let html = `
+    <div class="validation-issues-container ${containerClass}">
+      <div class="validation-issues-header">
+        ⚠️ Workflow Validation Issues (${errorCount} errors, ${warningCount} warnings)
+      </div>
+      <div class="validation-issues-list">
+  `;
+
+  validationIssues.forEach((issue) => {
+    const icon = issue.severity === 'error' ? '❌' : '⚠️';
+    const itemClass = issue.severity === 'error' ? 'error' : 'warning';
+    const typeText = issue.type.replace(/_/g, ' ').toUpperCase();
+    const detailsHtml = issue.details
+      ? `<div class="validation-issue-details">${JSON.stringify(issue.details)}</div>`
+      : '';
+
+    html += `
+      <div class="validation-issue-item ${itemClass}">
+        <div class="validation-issue-header">
+          ${icon} ${typeText}
+        </div>
+        <div class="validation-issue-message">${issue.message}</div>
+        ${detailsHtml}
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  return html;
+}
+
+/**
+ * Build timeline event HTML
+ */
+function buildTimelineEventHTML(item, isLast) {
+  if (!item || !item.type) {
+    return '';
+  }
+
+  const config = getTimelineEventConfig(item.type);
+  const eventClass = `timeline-event ${item.type}${isLast ? ' last' : ''}`;
+  const titleHtml = item.url
+    ? `<a href="${item.url}" target="_blank" rel="noopener noreferrer" class="timeline-event-link">${item.title || 'Event'}</a>`
+    : item.title || 'Event';
+  const actorHtml = item.actor
+    ? `<div class="timeline-event-actor">by ${item.actor}</div>`
+    : '';
+  const descriptionHtml = item.description
+    ? `<div class="timeline-event-description">${item.description}</div>`
+    : '';
+
+  return `
+    <div class="${eventClass}">
+      <div class="timeline-event-content">
+        <div class="timeline-event-title">
+          <span class="timeline-event-title-icon">${config.icon}</span>
+          <span class="timeline-event-title-text">${titleHtml}</span>
+        </div>
+        ${descriptionHtml}
+        <div class="timeline-event-time">${formatTimelineDate(item.time)}</div>
+        ${actorHtml}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Build simple timeline HTML
+ */
+function buildSimpleTimeline(timelineItems, validationIssues = []) {
+  if (!timelineItems || timelineItems.length === 0) {
+    return '<div class="timeline-empty">No timeline data available</div>';
+  }
 
   let html = '<div class="simple-timeline">';
 
-  // Show validation issues if any
-  if (validationIssues && validationIssues.length > 0) {
-    const errorCount = validationIssues.filter(i => i.severity === 'error').length;
-    const warningCount = validationIssues.filter(i => i.severity === 'warning').length;
-    
-    html += `
-      <div style="margin-bottom: 20px; padding: 15px; border-radius: 5px; background-color: ${errorCount > 0 ? '#fee' : '#fff3cd'}; border-left: 4px solid ${errorCount > 0 ? '#dc3545' : '#ffc107'};">
-        <div style="font-weight: bold; margin-bottom: 10px; color: ${errorCount > 0 ? '#dc3545' : '#856404'};">
-          ⚠️ Workflow Validation Issues (${errorCount} errors, ${warningCount} warnings)
-        </div>
-        <div style="max-height: 200px; overflow-y: auto;">
-    `;
-    
-    validationIssues.forEach((issue, index) => {
-      const icon = issue.severity === 'error' ? '❌' : '⚠️';
-      const color = issue.severity === 'error' ? '#dc3545' : '#856404';
-      html += `
-        <div style="margin-bottom: 8px; padding: 8px; background-color: white; border-radius: 3px; border-left: 3px solid ${color};">
-          <div style="font-weight: bold; color: ${color}; margin-bottom: 4px;">
-            ${icon} ${issue.type.replace('_', ' ').toUpperCase()}
-          </div>
-          <div style="color: #333; font-size: 14px;">${issue.message}</div>
-          ${issue.details ? `<div style="color: #666; font-size: 12px; margin-top: 4px; font-style: italic;">${JSON.stringify(issue.details)}</div>` : ''}
-        </div>
-      `;
-    });
-    
-    html += `
-        </div>
-      </div>
-    `;
-  }
+  // Add validation issues
+  html += buildValidationIssuesHTML(validationIssues || []);
 
+  // Add timeline events
   timelineItems.forEach((item, index) => {
+    if (!item) {
+      return;
+    }
     const isLast = index === timelineItems.length - 1;
-    const titleHtml = item.url
-      ? `<a href="${item.url}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">${item.title}</a>`
-      : item.title;
-    const actorHtml = item.actor ? `<div class="timeline-event-actor">by ${item.actor}</div>` : '';
-    html += `
-      <div class="timeline-event ${isLast ? 'last' : ''}">
-        <div class="timeline-event-content">
-          <div class="timeline-event-title">${titleHtml}</div>
-          <div class="timeline-event-time">${formatDate(item.time)}</div>
-          ${actorHtml}
-        </div>
-      </div>
-    `;
+    html += buildTimelineEventHTML(item, isLast);
   });
 
   html += '</div>';
@@ -536,7 +636,7 @@ function buildWorkflowTimeline(prData) {
 
   // Summary
   html += `
-    <div class="timeline-content" style="margin-top: 20px; background-color: #e7f3ff; border-left: 4px solid #007bff;">
+    <div class="timeline-content timeline-summary">
       <div class="timeline-title">Summary</div>
       <div class="timeline-description">
         <strong>Total Cycle Time:</strong> ${formatDuration(totalTime)}<br>
@@ -552,10 +652,15 @@ function buildWorkflowTimeline(prData) {
   return html;
 }
 
-// Close modal when clicking outside
-window.onclick = function (event) {
+/**
+ * Handle modal close on outside click
+ */
+function handleModalOutsideClick(event) {
   const modal = document.getElementById('workflowModal');
   if (event.target === modal) {
     closeWorkflowModal();
   }
-};
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', handleModalOutsideClick);

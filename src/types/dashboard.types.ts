@@ -19,4 +19,5 @@ export interface DashboardPrData {
   createdAt: string;
   updatedAt: string;
   labels?: Array<{ name: string; color?: string }>;
+  hasForcePushed?: boolean;
 }

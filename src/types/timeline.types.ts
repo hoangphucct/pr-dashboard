@@ -8,6 +8,7 @@ export interface TimelineItem {
   time: string;
   actor?: string;
   url?: string;
+  description?: string;
 }
 
 export interface TimelineResult {

@@ -89,4 +89,10 @@ export interface GitHubEvent {
   created_at: string;
   actor?: { login: string };
   label?: { name: string };
+  commit_id?: string | null;
+  commit_url?: string | null;
+  // Force push specific fields
+  before?: string | null;
+  after?: string | null;
+  ref?: string | null;
 }
