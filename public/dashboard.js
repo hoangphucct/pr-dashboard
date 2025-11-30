@@ -56,43 +56,43 @@ function initSummaryChart(data) {
       return;
     }
 
-    const chart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: prNumbers.map((n) => `PR #${n}`),
-      datasets: [
-        {
-          label: 'Commit to Open',
-          data: commitToOpen,
-          backgroundColor: 'rgba(75, 192, 192, 0.6)',
-        },
-        {
-          label: 'Open to Review',
-          data: openToReview,
-          backgroundColor: 'rgba(255, 206, 86, 0.6)',
-        },
-        {
-          label: 'Review to Approval',
-          data: reviewToApproval,
-          backgroundColor: 'rgba(153, 102, 255, 0.6)',
-        },
-        {
-          label: 'Approval to Merge',
-          data: approvalToMerge,
-          backgroundColor: 'rgba(255, 99, 132, 0.6)',
-        },
-      ],
-    },
-    options: {
-      scales: {
-        x: { stacked: true },
-        y: { stacked: true, beginAtZero: true },
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: prNumbers.map((n) => `PR #${n}`),
+        datasets: [
+          {
+            label: 'Commit to Open',
+            data: commitToOpen,
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+          },
+          {
+            label: 'Open to Review',
+            data: openToReview,
+            backgroundColor: 'rgba(255, 206, 86, 0.6)',
+          },
+          {
+            label: 'Review to Approval',
+            data: reviewToApproval,
+            backgroundColor: 'rgba(153, 102, 255, 0.6)',
+          },
+          {
+            label: 'Approval to Merge',
+            data: approvalToMerge,
+            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+          },
+        ],
       },
-      plugins: {
-        legend: { display: true, position: 'top' },
+      options: {
+        scales: {
+          x: { stacked: true },
+          y: { stacked: true, beginAtZero: true },
+        },
+        plugins: {
+          legend: { display: true, position: 'top' },
+        },
       },
-    },
-  });
+    });
   } catch (error) {
     console.error('Error creating summary chart:', error);
     console.error('Error details:', error.message, error.stack);
@@ -127,42 +127,42 @@ function initWorkflowChart(prNumber, metrics) {
       return;
     }
 
-    const chart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: [
-        'Commit to Open',
-        'Open to Review',
-        'Review to Approval',
-        'Approval to Merge',
-      ],
-      datasets: [
-        {
-          label: 'Hours',
-          data: [
-            metrics.commitToOpen || 0,
-            metrics.openToReview || 0,
-            metrics.reviewToApproval || 0,
-            metrics.approvalToMerge || 0,
-          ],
-          backgroundColor: [
-            'rgba(75, 192, 192, 0.6)',
-            'rgba(255, 206, 86, 0.6)',
-            'rgba(153, 102, 255, 0.6)',
-            'rgba(255, 99, 132, 0.6)',
-          ],
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: [
+          'Commit to Open',
+          'Open to Review',
+          'Review to Approval',
+          'Approval to Merge',
+        ],
+        datasets: [
+          {
+            label: 'Hours',
+            data: [
+              metrics.commitToOpen || 0,
+              metrics.openToReview || 0,
+              metrics.reviewToApproval || 0,
+              metrics.approvalToMerge || 0,
+            ],
+            backgroundColor: [
+              'rgba(75, 192, 192, 0.6)',
+              'rgba(255, 206, 86, 0.6)',
+              'rgba(153, 102, 255, 0.6)',
+              'rgba(255, 99, 132, 0.6)',
+            ],
+          },
+        ],
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true },
         },
-      ],
-    },
-    options: {
-      scales: {
-        y: { beginAtZero: true },
+        plugins: {
+          legend: { display: false },
+        },
       },
-      plugins: {
-        legend: { display: false },
-      },
-    },
-  });
+    });
   } catch (error) {
     console.error(`Error creating workflow chart for PR #${prNumber}:`, error);
     console.error('Error details:', error.message, error.stack);
@@ -278,8 +278,8 @@ function openWorkflowModalFromButton(button) {
     return;
   }
 
-  const prNumber = button.getAttribute('data-pr-number');
-  const prDataStr = button.getAttribute('data-pr-data');
+  const prNumber = button.dataset.prNumber;
+  const prDataStr = button.dataset.prData;
 
   if (!prNumber) {
     console.error('Missing PR number');
@@ -338,10 +338,12 @@ async function openWorkflowModal(prNumber, prData) {
       return;
     }
 
-    const timeline = buildSimpleTimeline(
-      data.timeline || [],
-      data.validationIssues || [],
-    );
+    // TimelineResult has structure: { timeline: TimelineItem[] }
+    // So we need to extract timeline array from the response
+    const timelineItems = data.timeline?.timeline || data.timeline || [];
+    const validationIssues = data.validationIssues || [];
+    
+    const timeline = buildSimpleTimeline(timelineItems, validationIssues);
     timelineContainer.innerHTML = timeline;
   } catch (error) {
     console.error('Error fetching timeline:', error);
@@ -362,20 +364,92 @@ function closeWorkflowModal() {
 }
 
 /**
+ * Update timeline for a PR
+ */
+async function updateTimeline(button) {
+  if (!button) {
+    console.error('Button element is required');
+    return;
+  }
+
+  const prNumber = button.dataset.prNumber;
+  if (!prNumber) {
+    console.error('Missing PR number');
+    return;
+  }
+
+  const prNum = Number.parseInt(prNumber, 10);
+  if (Number.isNaN(prNum)) {
+    console.error('Invalid PR number:', prNumber);
+    return;
+  }
+
+  // Disable button and show loading state
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Updating...';
+
+  try {
+    const response = await fetch(`/dashboard/timeline/${prNum}/update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data.success) {
+      // Show success message with validation count if any
+      const validationText =
+        data.validationIssuesCount > 0
+          ? `Updated (${data.validationIssuesCount} validation issues)`
+          : 'Updated';
+      button.textContent = validationText;
+      button.classList.add('btn-update-success');
+
+      // If still needs update, show update button again after reload
+      // Otherwise, show "Updated" button
+      // Reload page after a short delay to reflect changes
+      setTimeout(() => {
+        globalThis.location.reload();
+      }, 1000);
+    } else {
+      throw new Error(data.error || 'Update failed');
+    }
+  } catch (error) {
+    console.error('Error updating timeline:', error);
+    button.textContent = 'Error';
+    button.classList.add('btn-update-error');
+
+    // Reset button after 3 seconds
+    setTimeout(() => {
+      button.disabled = false;
+      button.textContent = originalText;
+      button.classList.remove('btn-update-error');
+    }, 3000);
+  }
+}
+
+/**
  * Format date string to local timezone (GMT+7)
  */
 function formatTimelineDate(dateStr) {
   if (!dateStr) return 'N/A';
-    const date = new Date(dateStr);
-    return date.toLocaleString('en-US', {
+  const date = new Date(dateStr);
+  return date.toLocaleString('en-US', {
     timeZone: 'Asia/Ho_Chi_Minh',
-      hour: 'numeric',
-      minute: '2-digit',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour12: true,
-    });
+    hour: 'numeric',
+    minute: '2-digit',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour12: true,
+  });
 }
 
 /**
@@ -491,155 +565,120 @@ function buildSimpleTimeline(timelineItems, validationIssues = []) {
 }
 
 /**
- * Build workflow timeline HTML (old version - kept for reference)
+ * Calculate timeline dates for workflow
  */
-function buildWorkflowTimeline(prData) {
-  const {
-    prNumber,
-    title,
-    author,
-    url,
-    status,
-    commitToOpen,
-    openToReview,
-    reviewToApproval,
-    approvalToMerge,
-    createdAt,
-  } = prData;
-
-  const totalTime =
-    (commitToOpen || 0) +
-    (openToReview || 0) +
-    (reviewToApproval || 0) +
-    (approvalToMerge || 0);
-
-  const now = new Date();
+function calculateTimelineDates(prData) {
+  const { commitToOpen, openToReview, reviewToApproval, approvalToMerge, createdAt } = prData;
   const createdDate = new Date(createdAt);
-
-  // Calculate timeline dates forward from created date
-  // Start from PR created date (this is when PR was opened)
   const openDate = createdDate;
 
-  // Calculate commit date (before PR was opened)
   const commitDate = commitToOpen
     ? new Date(openDate.getTime() - commitToOpen * 60 * 60 * 1000)
     : openDate;
 
-  // Calculate review date (after PR was opened)
   const reviewDate = openToReview
     ? new Date(openDate.getTime() + openToReview * 60 * 60 * 1000)
     : null;
 
-  // Calculate approval date (after first review)
-  const approvalDate = reviewToApproval && reviewDate
-    ? new Date(reviewDate.getTime() + reviewToApproval * 60 * 60 * 1000)
-    : reviewToApproval && openDate
-      ? new Date(openDate.getTime() + (openToReview || 0) * 60 * 60 * 1000 + reviewToApproval * 60 * 60 * 1000)
-      : null;
+  let approvalDate = null;
+  if (reviewToApproval && reviewDate) {
+    approvalDate = new Date(
+      reviewDate.getTime() + reviewToApproval * 60 * 60 * 1000,
+    );
+  } else if (reviewToApproval && openDate) {
+    approvalDate = new Date(
+      openDate.getTime() +
+        (openToReview || 0) * 60 * 60 * 1000 +
+        reviewToApproval * 60 * 60 * 1000,
+    );
+  }
 
-  // Calculate merge date (after approval)
-  const mergeDate = approvalToMerge && approvalDate
-    ? new Date(approvalDate.getTime() + approvalToMerge * 60 * 60 * 1000)
-    : approvalToMerge && openDate
-      ? new Date(openDate.getTime() + totalTime * 60 * 60 * 1000)
-      : null;
+  let mergeDate = null;
+  const totalTime = (commitToOpen || 0) + (openToReview || 0) + (reviewToApproval || 0) + (approvalToMerge || 0);
+  if (approvalToMerge && approvalDate) {
+    mergeDate = new Date(
+      approvalDate.getTime() + approvalToMerge * 60 * 60 * 1000,
+    );
+  } else if (approvalToMerge && openDate) {
+    mergeDate = new Date(openDate.getTime() + totalTime * 60 * 60 * 1000);
+  }
 
-  const formatDate = (date) => {
-    if (!date) return 'N/A';
-    // Use GMT+7 timezone (Vietnam timezone)
-    return date.toLocaleString('vi-VN', {
-      timeZone: 'Asia/Ho_Chi_Minh',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  return { commitDate, openDate, reviewDate, approvalDate, mergeDate, totalTime };
+}
 
-  const formatDuration = (hours) => {
-    if (!hours || hours === 0) return '0h';
-    const days = Math.floor(hours / 24);
-    const remainingHours = Math.round(hours % 24);
-    if (days > 0) {
-      return `${days}d ${remainingHours}h`;
-    }
-    return `${remainingHours}h`;
-  };
+/**
+ * Format date for timeline display
+ */
+function formatWorkflowDate(date) {
+  if (!date) return 'N/A';
+  return date.toLocaleString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/**
+ * Format duration in hours to readable string
+ */
+function formatWorkflowDuration(hours) {
+  if (!hours || hours === 0) return '0h';
+  const days = Math.floor(hours / 24);
+  const remainingHours = Math.round(hours % 24);
+  if (days > 0) {
+    return `${days}d ${remainingHours}h`;
+  }
+  return `${remainingHours}h`;
+}
+
+/**
+ * Build timeline item HTML
+ */
+function buildTimelineItemHTML(type, title, date, duration, description) {
+  return `
+    <div class="timeline-item ${type}">
+      <div class="timeline-content">
+        <div class="timeline-title">${title}</div>
+        <div class="timeline-time">${formatWorkflowDate(date)}</div>
+        ${duration ? `<div class="timeline-duration">Duration: ${formatWorkflowDuration(duration)}</div>` : ''}
+        <div class="timeline-description">${description}</div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Build workflow timeline HTML (old version - kept for reference)
+ */
+function buildWorkflowTimeline(prData) {
+  const { author, url, status, commitToOpen, openToReview, reviewToApproval, approvalToMerge } = prData;
+  const { commitDate, openDate, reviewDate, approvalDate, mergeDate, totalTime } = calculateTimelineDates(prData);
 
   let html = '<div class="timeline">';
 
-  // First Commit
-  html += `
-    <div class="timeline-item commit">
-      <div class="timeline-content">
-        <div class="timeline-title">First Commit</div>
-        <div class="timeline-time">${formatDate(commitDate)}</div>
-        <div class="timeline-description">Work started on the task</div>
-      </div>
-    </div>
-  `;
+  html += buildTimelineItemHTML('commit', 'First Commit', commitDate, null, 'Work started on the task');
+  html += buildTimelineItemHTML('open', 'PR Opened', openDate, commitToOpen, 'Pull request was opened for review');
 
-  // PR Opened
-  html += `
-    <div class="timeline-item open">
-      <div class="timeline-content">
-        <div class="timeline-title">PR Opened</div>
-        <div class="timeline-time">${formatDate(openDate)}</div>
-        <div class="timeline-duration">Duration: ${formatDuration(commitToOpen)}</div>
-        <div class="timeline-description">Pull request was opened for review</div>
-      </div>
-    </div>
-  `;
-
-  // First Review
   if (reviewDate && openToReview > 0) {
-    html += `
-      <div class="timeline-item review">
-        <div class="timeline-content">
-          <div class="timeline-title">First Review Comment</div>
-          <div class="timeline-time">${formatDate(reviewDate)}</div>
-          <div class="timeline-duration">Duration: ${formatDuration(openToReview)}</div>
-          <div class="timeline-description">First review comment received</div>
-        </div>
-      </div>
-    `;
+    html += buildTimelineItemHTML('review', 'First Review Comment', reviewDate, openToReview, 'First review comment received');
   }
 
-  // Approval
   if (approvalDate && reviewToApproval > 0) {
-    html += `
-      <div class="timeline-item approved">
-        <div class="timeline-content">
-          <div class="timeline-title">PR Approved</div>
-          <div class="timeline-time">${formatDate(approvalDate)}</div>
-          <div class="timeline-duration">Duration: ${formatDuration(reviewToApproval)}</div>
-          <div class="timeline-description">Pull request was approved</div>
-        </div>
-      </div>
-    `;
+    html += buildTimelineItemHTML('approved', 'PR Approved', approvalDate, reviewToApproval, 'Pull request was approved');
   }
 
-  // Merged
   if (mergeDate && approvalToMerge > 0) {
-    html += `
-      <div class="timeline-item merged">
-        <div class="timeline-content">
-          <div class="timeline-title">PR Merged</div>
-          <div class="timeline-time">${formatDate(mergeDate)}</div>
-          <div class="timeline-duration">Duration: ${formatDuration(approvalToMerge)}</div>
-          <div class="timeline-description">Pull request was merged</div>
-        </div>
-      </div>
-    `;
+    html += buildTimelineItemHTML('merged', 'PR Merged', mergeDate, approvalToMerge, 'Pull request was merged');
   }
 
-  // Summary
   html += `
     <div class="timeline-content timeline-summary">
       <div class="timeline-title">Summary</div>
       <div class="timeline-description">
-        <strong>Total Cycle Time:</strong> ${formatDuration(totalTime)}<br>
+        <strong>Total Cycle Time:</strong> ${formatWorkflowDuration(totalTime)}<br>
         <strong>Author:</strong> ${author}<br>
         <strong>Status:</strong> ${status}<br>
         ${url ? `<strong>PR Link:</strong> <a href="${url}" target="_blank">${url}</a>` : ''}
@@ -648,7 +687,6 @@ function buildWorkflowTimeline(prData) {
   `;
 
   html += '</div>';
-
   return html;
 }
 
@@ -663,4 +701,4 @@ function handleModalOutsideClick(event) {
 }
 
 // Close modal when clicking outside
-window.addEventListener('click', handleModalOutsideClick);
+globalThis.addEventListener('click', handleModalOutsideClick);

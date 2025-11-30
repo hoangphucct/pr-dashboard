@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { GitHubService } from '../github/github.service';
-import { CommitService } from '../commit/commit.service';
-import { BusinessDaysService } from '../utils/business-days.service';
-import type { PrMetrics } from '../storage/storage.service';
+import { GitHubService } from '@github/github.service';
+import { CommitService } from '@commit/commit.service';
+import { BusinessDaysService } from '@utils/business-days.service';
+import type { PrMetrics } from '@storage/storage.service';
 import type {
   GitHubPullRequestDetail,
   GitHubEvent,
-} from '../types/github.types';
+} from '@shared/github.types';
 
 @Injectable()
 export class PrService {

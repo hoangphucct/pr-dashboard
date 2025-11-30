@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { join } from 'node:path';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { HandlebarsHelper } from './common/helpers/handlebars.helper';
+import { HandlebarsHelper } from '@common/helpers/handlebars.helper';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);

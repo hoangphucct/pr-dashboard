@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PR Cycle-Time Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="https://zigexn.vn/images/logo.svg">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -36,7 +37,7 @@
       <select id="dateSelect" onchange="window.location.href='/dashboard?date=' + this.value">
         <option value="">Hôm nay</option>
         {{#each availableDates}}
-        <option value="{{this}}" {{#if (eq this ../selectedDate)}}selected{{/if}}>{{this}}</option>
+          <option value="{{this}}" {{#if (eq this ../selectedDate)}}selected{{/if}}>{{this}}</option>
         {{/each}}
       </select>
     </div>
@@ -66,10 +67,10 @@
             <td><strong>#{{prNumber}}</strong></td>
             <td class="title-cell">
               <div class="title-content">
-              {{#if url}}
-                <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{title}}</a>
-              {{else}}
-                {{title}}
+                {{#if url}}
+                  <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{title}}</a>
+                {{else}}
+                  {{title}}
                 {{/if}}
                 {{#if hasForcePushed}}
                   <span class="force-pushed-badge" title="This PR has been force-pushed">⚠️ Force Pushed</span>
@@ -104,7 +105,18 @@
             <td><strong>{{formatTimeWithDays (add openToReview reviewToApproval approvalToMerge)}}</strong></td>
             <td><strong>{{formatTimeWithDays (add commitToOpen openToReview reviewToApproval approvalToMerge)}}</strong></td>
             <td>
-              <button class="btn-workflow" data-pr-number="{{prNumber}}" data-pr-data='{{{json this}}}' onclick="openWorkflowModalFromButton(this)">View Details</button>
+              <div class="workflow-actions">
+              <button class="btn-workflow" data-pr-number="{{prNumber}}" data-pr-data='{{{json this}}}' onclick="openWorkflowModalFromButton(this)">Details</button>
+                {{#if needsTimelineUpdate}}
+                  <button class="btn-update-timeline" data-pr-number="{{prNumber}}" onclick="updateTimeline(this)">
+                    Update
+                  </button>
+                {{else}}
+                <button class="btn-update-timeline success">
+                  Updated
+                </button>
+                {{/if}}
+              </div>
             </td>
           </tr>
           {{/each}}

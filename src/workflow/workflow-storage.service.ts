@@ -7,31 +7,18 @@ import {
   readdirSync,
 } from 'node:fs';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import type { TimelineItem } from '@shared/timeline.types';
 
-export interface TimelineItem {
-  type: string;
-  title: string;
-  time: string;
-  actor?: string;
-  url?: string;
-}
-
+/**
+ * WorkflowData now only contains timeline
+ * All other data (prNumber, title, author, url, status, metrics, etc.) 
+ * is stored in PrMetrics in data-{date}.json
+ */
 export interface WorkflowData {
-  prNumber: number;
-  title: string;
-  author: string;
-  url: string;
-  status: string;
-  changedFiles?: number;
-  additions?: number;
-  deletions?: number;
   timeline: TimelineItem[];
-  commitToOpen: number;
-  openToReview: number;
-  reviewToApproval: number;
-  approvalToMerge: number;
-  createdAt: string;
-  updatedAt: string;
+  prUpdatedAt: string;
+  timelineHash?: string; // Hash of timeline data to detect changes
 }
 
 interface WorkflowStorage {
@@ -39,6 +26,14 @@ interface WorkflowStorage {
   workflow: WorkflowData;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Calculate hash of timeline data
+ */
+function calculateTimelineHash(timeline: TimelineItem[]): string {
+  const timelineStr = JSON.stringify(timeline || []);
+  return createHash('md5').update(timelineStr).digest('hex');
 }
 
 @Injectable()
@@ -60,14 +55,22 @@ export class WorkflowStorageService {
   }
 
   /**
-   * Save workflow data for a PR
+   * Save workflow data (timeline) for a PR
    */
-  saveWorkflow(workflow: WorkflowData): void {
-    const filePath = this.getFilePath(workflow.prNumber);
-    const existingData = this.loadWorkflow(workflow.prNumber);
+  saveWorkflow(
+    prNumber: number,
+    workflow: WorkflowData,
+  ): void {
+    const filePath = this.getFilePath(prNumber);
+    const existingData = this.loadWorkflow(prNumber);
+
+    // Calculate hash if not provided
+    if (!workflow.timelineHash) {
+      workflow.timelineHash = calculateTimelineHash(workflow.timeline);
+    }
 
     const storage: WorkflowStorage = {
-      prNumber: workflow.prNumber,
+      prNumber,
       workflow,
       createdAt: existingData?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -126,5 +129,48 @@ export class WorkflowStorageService {
     }
 
     return workflows.sort((a, b) => b.prNumber - a.prNumber);
+  }
+
+  /**
+   * Get cached PR updatedAt from workflow storage
+   */
+  getCachedPrUpdatedAt(prNumber: number): string | null {
+    const workflow = this.loadWorkflow(prNumber);
+    return workflow?.workflow?.prUpdatedAt || null;
+  }
+
+  /**
+   * Get cached timeline hash
+   */
+  getCachedTimelineHash(prNumber: number): string | null {
+    const workflow = this.loadWorkflow(prNumber);
+    return workflow?.workflow?.timelineHash || null;
+  }
+
+  /**
+   * Check if timeline data has changed by comparing hash
+   */
+  checkTimelineDataChanged(prNumber: number): boolean {
+    const workflow = this.loadWorkflow(prNumber);
+    if (!workflow || !workflow.workflow.timeline) {
+      return true; // No cache means needs update
+    }
+
+    const storedHash = workflow.workflow.timelineHash;
+    if (!storedHash) {
+      return true; // No hash means needs update
+    }
+
+    // Calculate current hash and compare
+    const currentHash = calculateTimelineHash(workflow.workflow.timeline);
+    return currentHash !== storedHash;
+  }
+
+  /**
+   * Get timeline items from workflow
+   */
+  getTimelineItems(prNumber: number): TimelineItem[] {
+    const workflow = this.loadWorkflow(prNumber);
+    return workflow?.workflow?.timeline || [];
   }
 }

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { GitHubCommit } from '../types/github.types';
+import type { GitHubCommit } from '@shared/github.types';
 
 /**
  * Service for processing and analyzing commits

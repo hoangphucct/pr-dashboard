@@ -1,5 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import type { WorkflowData } from './workflow-storage.service';
+import type { TimelineItem } from '@shared/timeline.types';
+
+/**
+ * Workflow data for validation
+ * Only needs status and createdAt, not full WorkflowData
+ */
+interface WorkflowDataForValidation {
+  status: string;
+  createdAt: string;
+}
 
 export interface ValidationIssue {
   type: 'missing_step' | 'wrong_order' | 'abnormal_time';
@@ -32,8 +41,12 @@ export class WorkflowValidationService {
   /**
    * Validate workflow and return issues
    * Skip validation if PR is Draft (only validate when opened or merged)
+   * Timeline is loaded from workflow storage
    */
-  validateWorkflow(workflow: WorkflowData): ValidationIssue[] {
+  validateWorkflow(
+    workflow: WorkflowDataForValidation,
+    timeline: TimelineItem[],
+  ): ValidationIssue[] {
     // Skip validation for Draft PRs - only validate when opened or merged
     if (workflow.status === 'Draft') {
       return [];
@@ -42,16 +55,15 @@ export class WorkflowValidationService {
     const issues: ValidationIssue[] = [];
 
     // Check for missing steps
-    const missingStepsIssues = this.checkMissingSteps(workflow);
+    const missingStepsIssues = this.checkMissingSteps(timeline, workflow.status);
     issues.push(...missingStepsIssues);
 
     // Check for wrong order
-    const wrongOrderIssues = this.checkWrongOrder(workflow);
+    const wrongOrderIssues = this.checkWrongOrder(workflow, timeline);
     issues.push(...wrongOrderIssues);
 
-    // Check for abnormal time
-    const abnormalTimeIssues = this.checkAbnormalTime(workflow);
-    issues.push(...abnormalTimeIssues);
+    // Note: checkAbnormalTime removed as it requires metrics data
+    // which is now stored in PrMetrics, not WorkflowData
 
     return issues;
   }
@@ -59,9 +71,12 @@ export class WorkflowValidationService {
   /**
    * Check for missing workflow steps
    */
-  private checkMissingSteps(workflow: WorkflowData): ValidationIssue[] {
+  private checkMissingSteps(
+    timeline: TimelineItem[],
+    status: string,
+  ): ValidationIssue[] {
     const issues: ValidationIssue[] = [];
-    const timelineTypes = new Set(workflow.timeline.map((item) => item.type));
+    const timelineTypes = new Set(timeline.map((item) => item.type));
 
     // Check for required steps
     if (!timelineTypes.has('commit')) {
@@ -72,9 +87,7 @@ export class WorkflowValidationService {
       });
     } else {
       // Check if commit has "Work has started on the" message
-      const commitItems = workflow.timeline.filter(
-        (item) => item.type === 'commit',
-      );
+      const commitItems = timeline.filter((item) => item.type === 'commit');
       const hasWorkStartedCommit = commitItems.some((item) =>
         item.title?.toLowerCase().startsWith('work has started on the'),
       );
@@ -108,7 +121,8 @@ export class WorkflowValidationService {
       });
     }
 
-    if (workflow.status === 'Merged' && !timelineTypes.has('merged')) {
+    // Check merged step only if PR is merged
+    if (status === 'Merged' && !timelineTypes.has('merged')) {
       issues.push({
         type: 'missing_step',
         severity: 'error',
@@ -122,15 +136,18 @@ export class WorkflowValidationService {
   /**
    * Check for wrong order in workflow
    */
-  private checkWrongOrder(workflow: WorkflowData): ValidationIssue[] {
+  private checkWrongOrder(
+    workflow: WorkflowDataForValidation,
+    timeline: TimelineItem[],
+  ): ValidationIssue[] {
     const issues: ValidationIssue[] = [];
-    const timeline = [...workflow.timeline].sort(
+    const sortedTimeline = [...timeline].sort(
       (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
     );
 
     // Check if review_requested appears before PR is opened
     const prOpenedTime = new Date(workflow.createdAt).getTime();
-    const reviewRequestedItems = timeline.filter(
+    const reviewRequestedItems = sortedTimeline.filter(
       (item) => item.type === 'review_requested',
     );
 
@@ -151,10 +168,10 @@ export class WorkflowValidationService {
     }
 
     // Check if comment appears before ready_for_review
-    const readyForReviewItems = timeline.filter(
+    const readyForReviewItems = sortedTimeline.filter(
       (item) => item.type === 'ready_for_review',
     );
-    const commentItems = timeline.filter(
+    const commentItems = sortedTimeline.filter(
       (item) => item.type === 'comment' || item.type === 'review_comment',
     );
 
@@ -180,7 +197,9 @@ export class WorkflowValidationService {
     }
 
     // Check if approved appears before comment
-    const approvedItems = timeline.filter((item) => item.type === 'approved');
+    const approvedItems = sortedTimeline.filter(
+      (item) => item.type === 'approved',
+    );
     if (approvedItems.length > 0 && commentItems.length > 0) {
       const firstApproved = approvedItems[0];
       const lastComment = commentItems[commentItems.length - 1];
@@ -204,34 +223,4 @@ export class WorkflowValidationService {
     return issues;
   }
 
-  /**
-   * Check for abnormal time (e.g., very short time with many files changed)
-   */
-  private checkAbnormalTime(workflow: WorkflowData): ValidationIssue[] {
-    const issues: ValidationIssue[] = [];
-
-    if (!workflow.changedFiles || workflow.changedFiles === 0) {
-      return issues;
-    }
-
-    // Check commitToOpen time
-    if (workflow.commitToOpen > 0) {
-      const timePerFile = workflow.commitToOpen / workflow.changedFiles;
-      if (timePerFile < this.minTimePerFile) {
-        issues.push({
-          type: 'abnormal_time',
-          severity: 'warning',
-          message: `Commit to Open time (${workflow.commitToOpen}h) seems too short for ${workflow.changedFiles} files changed (${timePerFile.toFixed(3)}h per file)`,
-          details: {
-            commitToOpen: workflow.commitToOpen,
-            changedFiles: workflow.changedFiles,
-            timePerFile: timePerFile,
-            minTimePerFile: this.minTimePerFile,
-          },
-        });
-      }
-    }
-
-    return issues;
-  }
 }

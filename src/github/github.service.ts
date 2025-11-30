@@ -6,7 +6,7 @@ import type {
   GitHubLabel,
   GitHubPullRequest,
   GitHubPullRequestDetail,
-} from '../types/github.types';
+} from '@shared/github.types';
 
 @Injectable()
 export class GitHubService {
@@ -102,6 +102,21 @@ export class GitHubService {
     } catch (error) {
       console.error('Error fetching base branch commits:', error);
       return [];
+    }
+  }
+
+  /**
+   * Get PR updated_at timestamp from GitHub API (lightweight call)
+   */
+  async getPullRequestUpdatedAt(prNumber: number): Promise<string> {
+    try {
+      const response = await this.apiClient.get<{ updated_at: string }>(
+        `/repos/${this.owner}/${this.repo}/pulls/${prNumber}`,
+      );
+      return response.data.updated_at || '';
+    } catch (error) {
+      console.error(`Error fetching PR updated_at for PR ${prNumber}:`, error);
+      return '';
     }
   }
 

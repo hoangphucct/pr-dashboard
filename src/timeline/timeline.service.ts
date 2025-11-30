@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { CommitService } from '../commit/commit.service';
+import { CommitService } from '@commit/commit.service';
 import type {
   GitHubEvent,
   GitHubPullRequestDetail,
-} from '../types/github.types';
+} from '@shared/github.types';
 import type {
   CommentWithType,
   TimelineItem,
   TimelineResult,
-} from '../types/timeline.types';
+} from '@shared/timeline.types';
 
 /**
  * Service for building PR timeline

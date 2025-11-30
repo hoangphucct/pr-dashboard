@@ -5,7 +5,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: "Open Sans", sans-serif;
   background-color: #f5f5f5;
   padding: 20px;
 }
@@ -53,7 +53,7 @@ input[type="text"] {
 
 button {
   background-color: #007bff;
-  color: #fff;
+  color: #ffffff;
   padding: 10px 20px;
   border: none;
   border-radius: 4px;
@@ -92,14 +92,12 @@ td {
   border: 1px solid #ddd;
   padding: 12px;
   text-align: center;
-  font-size: 12px;
 }
 
 th {
   background-color: #007bff;
   color: #ffffff;
   font-weight: 600;
-  font-size: 12px;
 }
 
 tr:nth-child(even) {
@@ -109,7 +107,7 @@ tr:nth-child(even) {
 .no-data {
   text-align: center;
   padding: 40px;
-  color: #999;
+  color: #666;
 }
 
 .chart-container {
@@ -152,27 +150,27 @@ canvas {
 
 .status-merged {
   background-color: #6f42c1;
-  color: white;
+  color: #ffffff;
 }
 
 .status-open {
-  background-color: #28a745;
-  color: white;
+  background-color: #1e7e34;
+  color: #ffffff;
 }
 
 .status-closed {
   background-color: #dc3545;
-  color: white;
+  color: #ffffff;
 }
 
 .status-draft {
   background-color: #6c757d;
-  color: white;
+  color: #ffffff;
 }
 
 .status-unknown {
-  background-color: #ffc107;
-  color: #000;
+  background-color: #bf360c;
+  color: #ffffff;
 }
 
 a {
@@ -191,9 +189,15 @@ a:hover {
   vertical-align: top;
 }
 
+.workflow-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .btn-workflow {
-  background-color: #17a2b8;
-  color: white;
+  background-color: #0d6efd;
+  color: #ffffff;
   padding: 6px 12px;
   border: none;
   border-radius: 4px;
@@ -204,6 +208,38 @@ a:hover {
 
 .btn-workflow:hover {
   background-color: #138496;
+}
+
+.btn-update-timeline {
+  background-color: #e65100;
+  color: #ffffff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.btn-update-timeline:hover:not(:disabled) {
+  background-color: #f57c00;
+}
+
+.btn-update-timeline:disabled,
+.btn-update-timeline.success {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-update-success,
+.btn-update-timeline.success {
+  opacity: 1;
+  background-color: #28a745 !important;
+}
+
+.btn-update-error {
+  background-color: #dc3545 !important;
 }
 
 /* Modal Styles */
@@ -256,7 +292,7 @@ a:hover {
 }
 
 .close {
-  color: #aaa;
+  color: #666;
   font-size: 28px;
   font-weight: bold;
   cursor: pointer;
@@ -305,7 +341,7 @@ a:hover {
   height: 12px;
   border-radius: 50%;
   background-color: #007bff;
-  border: 3px solid white;
+  border: 3px solid #ffffff;
   box-shadow: 0 0 0 2px #007bff;
   z-index: 1;
 }
@@ -372,7 +408,7 @@ a:hover {
   height: 12px;
   border-radius: 50%;
   background-color: #007bff;
-  border: 2px solid white;
+  border: 2px solid #ffffff;
   box-shadow: 0 0 0 2px #007bff;
 }
 
@@ -387,13 +423,13 @@ a:hover {
 }
 
 .timeline-item.review::before {
-  background-color: #ffc107;
-  box-shadow: 0 0 0 2px #ffc107;
+  background-color: #f57c00;
+  box-shadow: 0 0 0 2px #f57c00;
 }
 
 .timeline-item.open::before {
-  background-color: #17a2b8;
-  box-shadow: 0 0 0 2px #17a2b8;
+  background-color: #0d6efd;
+  box-shadow: 0 0 0 2px #0d6efd;
 }
 
 .timeline-item.commit::before {
@@ -445,7 +481,7 @@ a:hover {
 
 .btn-update-all {
   background-color: #28a745;
-  color: white;
+  color: #ffffff;
   padding: 10px 20px;
   border: none;
   border-radius: 5px;
@@ -467,15 +503,26 @@ a:hover {
 
 /* Force Pushed Badge */
 .force-pushed-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 600;
-  background-color: #ffc107;
-  color: #000;
+  background: linear-gradient(135deg, #e65100 0%, #f57c00 100%);
+  color: #ffffff;
   white-space: nowrap;
-  border: 1px solid #ff9800;
+  border: 1px solid #e65100;
+  box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
+  margin-left: 8px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.force-pushed-badge:hover {
+  box-shadow: 0 3px 6px rgba(255, 107, 53, 0.4);
+  transform: translateY(-1px);
 }
 
 /* PR Labels Styles */
@@ -511,7 +558,7 @@ a:hover {
 .timeline-empty {
   padding: 20px;
   text-align: center;
-  color: #999;
+  color: #666;
 }
 
 /* Validation Issues Container */
@@ -523,13 +570,13 @@ a:hover {
 }
 
 .validation-issues-container.error {
-  background-color: #fee;
+  background-color: #f8d7da;
   border-left-color: #dc3545;
 }
 
 .validation-issues-container.warning {
   background-color: #fff3cd;
-  border-left-color: #ffc107;
+  border-left-color: #f57c00;
 }
 
 .validation-issues-header {
@@ -538,7 +585,7 @@ a:hover {
 }
 
 .validation-issues-container.error .validation-issues-header {
-  color: #dc3545;
+  color: #721c24;
 }
 
 .validation-issues-container.warning .validation-issues-header {
@@ -563,7 +610,7 @@ a:hover {
 }
 
 .validation-issue-item.warning {
-  border-left-color: #856404;
+  border-left-color: #f57c00;
 }
 
 .validation-issue-header {
@@ -576,16 +623,16 @@ a:hover {
 }
 
 .validation-issue-item.warning .validation-issue-header {
-  color: #856404;
+  color: #e65100;
 }
 
 .validation-issue-message {
-  color: #333;
+  color: #000000;
   font-size: 14px;
 }
 
 .validation-issue-details {
-  color: #666;
+  color: #333333;
   font-size: 12px;
   margin-top: 4px;
   font-style: italic;
@@ -624,11 +671,11 @@ a:hover {
 }
 
 .timeline-event.review_requested {
-  border-left-color: #ffc107;
+  border-left-color: #f57c00;
 }
 
 .timeline-event.force_pushed {
-  border-left-color: #ff9800;
+  border-left-color: #e65100;
 }
 
 .timeline-event.approved {
@@ -642,17 +689,25 @@ a:hover {
 /* Timeline Summary */
 .timeline-summary {
   margin-top: 20px;
-  background-color: #e7f3ff;
+  background-color: #cfe2ff;
   border-left: 4px solid #007bff;
   padding: 15px;
   border-radius: 6px;
+}
+
+.timeline-summary .timeline-title {
+  color: #000000;
+}
+
+.timeline-summary .timeline-description {
+  color: #000000;
 }
 
 /* Chart Error Message */
 .chart-error-message {
   padding: 20px;
   background-color: #fee;
-  color: #c00;
+  color: #8b0000;
   margin: 20px;
   border: 2px solid #c00;
   border-radius: 5px;

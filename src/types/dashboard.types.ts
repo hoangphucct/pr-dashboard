@@ -20,4 +20,5 @@ export interface DashboardPrData {
   updatedAt: string;
   labels?: Array<{ name: string; color?: string }>;
   hasForcePushed?: boolean;
+  needsTimelineUpdate?: boolean;
 }

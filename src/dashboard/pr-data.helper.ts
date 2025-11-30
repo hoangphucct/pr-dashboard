@@ -1,5 +1,5 @@
-import type { PrMetrics } from '../storage/storage.service';
-import type { DashboardPrData } from '../types/dashboard.types';
+import type { PrMetrics } from '@storage/storage.service';
+import type { DashboardPrData } from '@shared/dashboard.types';
 
 /**
  * Helper functions for processing PR data
