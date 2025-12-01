@@ -23,6 +23,33 @@ export class FindyScraperService {
   constructor(private readonly configService: ConfigService) {}
 
   /**
+   * Random delay to simulate human behavior (reduced for speed)
+   */
+  private async humanDelay(min = 50, max = 150): Promise<void> {
+    const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+
+  /**
+   * Move mouse naturally to element
+   */
+  private async moveMouseToElement(
+    page: Page,
+    element: Awaited<ReturnType<Page['$']>>,
+  ): Promise<void> {
+    if (!element) {
+      return;
+    }
+    const box = await element.boundingBox();
+    if (box) {
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      await page.mouse.move(x, y, { steps: 10 });
+      await this.humanDelay(50, 150);
+    }
+  }
+
+  /**
    * Get or create browser instance
    */
   private async getBrowser(): Promise<Browser> {
@@ -94,18 +121,18 @@ export class FindyScraperService {
         if (url.includes(urlPattern)) {
           clearTimeout(timeoutId);
           void (async () => {
-            try {
+          try {
               const data = (await response.json()) as unknown;
-              resolve(data);
-            } catch (error) {
-              reject(
-                new Error(
-                  `Failed to parse GraphQL response: ${
-                    error instanceof Error ? error.message : 'Unknown error'
-                  }`,
-                ),
-              );
-            }
+            resolve(data);
+          } catch (error) {
+            reject(
+              new Error(
+                `Failed to parse GraphQL response: ${
+                  error instanceof Error ? error.message : 'Unknown error'
+                }`,
+              ),
+            );
+          }
           })();
         }
       });
@@ -141,8 +168,8 @@ export class FindyScraperService {
             isResolved = true;
             clearTimeout(timeoutId);
             reject(error instanceof Error ? error : new Error(String(error)));
-          }
-        });
+        }
+      });
     });
   }
 
@@ -210,19 +237,22 @@ export class FindyScraperService {
           const loginButton = await page.$('button[type="submit"]');
 
           if (orgNameInput && emailInput && passwordInput && loginButton) {
-            await orgNameInput.type(orgName);
-            await emailInput.type(email);
-            await passwordInput.type(password);
+            await orgNameInput.type(orgName, { delay: 0 });
+            await this.humanDelay(30, 50);
+            await emailInput.type(email, { delay: 0 });
+            await this.humanDelay(30, 50);
+            await passwordInput.type(password, { delay: 0 });
+            await this.humanDelay(50, 100);
             await loginButton.click();
-
+            
             // Wait for navigation after login
             await page.waitForNavigation({
-              waitUntil: 'networkidle2',
-              timeout: 15000,
+              waitUntil: 'domcontentloaded',
+              timeout: 8000,
             });
-
-            // Wait a bit more to ensure page is fully loaded
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            
+            // Wait for page to be interactive
+            await this.humanDelay(200, 300);
           } else {
             return {
               success: false,
@@ -239,96 +269,321 @@ export class FindyScraperService {
         }
       }
 
-      // Wait for page to load completely
-      await page
-        .waitForSelector(
-          'button:has-text("Monthly"), button[text*="Monthly"]',
-          {
-            timeout: 15000,
-          },
-        )
-        .catch(() => {
-          console.error('Monthly button not found');
-          // Button might already be selected or have different text
-        });
+      // Wait for page to be ready
+      await this.humanDelay(100, 200);
 
-      // Find and click Monthly button
-      await page.evaluate(() => {
+      // Find Monthly button using Puppeteer
+      console.log('Looking for Monthly button...');
+      let monthlyButton: Awaited<ReturnType<Page['$']>> = null;
+      let wasSelected = false;
+
+      // Strategy 1: Find by evaluating and getting selector, then use Puppeteer to get element
+      const buttonIndex = await page.evaluate(() => {
         const buttons = Array.from(document.querySelectorAll('button'));
-        const monthlyButton = buttons.find((btn) =>
-          btn.textContent?.includes('Monthly'),
-        );
-        if (monthlyButton) {
-          monthlyButton.click();
+        for (let i = 0; i < buttons.length; i++) {
+          const btn = buttons[i];
+          const text = btn.textContent?.trim() || '';
+          if (text.toLowerCase() === 'monthly' || text.toLowerCase().includes('monthly')) {
+            return i;
+          }
         }
+        return -1;
       });
 
-      // Wait for UI to update
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Wait for chart to be visible
-      await page.waitForSelector('.recharts-layer.recharts-bar', {
-        timeout: 10000,
-      });
-
-      // Set up listener for GraphQL request BEFORE clicking
-      const graphQLPromise = this.waitForGraphQLRequest(
-        page,
-        'api.findy-team.io/graphql/enterprise?opname=PullListTablePullStatsList',
-        30000,
-      );
-
-      // Click on the chart bar to trigger GraphQL request
-      const chartBar = await page.$('.recharts-layer.recharts-bar');
-      if (chartBar) {
-        await chartBar.click();
+      if (buttonIndex >= 0) {
+        const allButtons = await page.$$('button');
+        if (allButtons[buttonIndex]) {
+          monthlyButton = allButtons[buttonIndex];
+          console.log('Found Monthly button at index:', buttonIndex);
+        }
       }
 
-      // Wait for GraphQL response
-      try {
-        const graphQLData = await this.waitWithTimeout(
-          graphQLPromise,
-          30000,
-          'GraphQL request timeout',
-        );
+      // Strategy 2: Try finding by checking all buttons with Puppeteer
+      if (!monthlyButton) {
+        const buttons = await page.$$('button');
+        for (const btn of buttons) {
+          const text = await page.evaluate((el) => {
+            return el.textContent?.trim() || '';
+          }, btn);
+          if (text.toLowerCase() === 'monthly' || text.toLowerCase().includes('monthly')) {
+            monthlyButton = btn;
+            console.log('Found Monthly button by iterating buttons');
+            break;
+          }
+        }
+      }
 
-        // Extract PR numbers from GraphQL data
-        const prNumbers = this.extractPrNumbers(graphQLData);
+      if (monthlyButton) {
+        // Check if already selected
+        wasSelected = await page.evaluate((el) => {
+          return (el as HTMLElement).getAttribute('aria-pressed') === 'true';
+        }, monthlyButton);
 
+        // Highlight button to make it visible
+        await page.evaluate((el) => {
+          const btn = el as HTMLElement;
+          const originalStyle = btn.getAttribute('style') || '';
+          btn.setAttribute('style', `${originalStyle}; border: 3px solid red !important; background: yellow !important; z-index: 9999 !important;`);
+          setTimeout(() => {
+            btn.setAttribute('style', originalStyle);
+          }, 1000);
+        }, monthlyButton);
+
+        console.log('Clicking Monthly button...');
+        // Move mouse to button first
+        await this.moveMouseToElement(page, monthlyButton);
+        await this.humanDelay(100, 200);
+        
+        // Click using Puppeteer API
+        await monthlyButton.click({ delay: 50 });
+        console.log('Monthly button clicked successfully');
+        
+        if (wasSelected) {
+          console.log('Monthly button was already selected, clicked again to ensure state');
+        }
+        
+        // Wait for UI to update after clicking
+        await this.humanDelay(300, 500);
+      } else {
+        console.warn('Monthly button not found - might already be selected or page structure changed');
+        // Continue anyway, button might already be in correct state
+      }
+
+      // Wait for chart to be visible with retry
+      let chartVisible = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await page.waitForSelector('.recharts-layer.recharts-bar', {
+            timeout: 2000,
+          });
+          chartVisible = true;
+          break;
+        } catch {
+          if (attempt < 2) {
+            await this.humanDelay(100, 200);
+          }
+        }
+      }
+
+      if (!chartVisible) {
         return {
-          success: true,
-          data: graphQLData,
-          prNumbers,
+          success: false,
+          error: 'Chart not found after waiting. The page might not be fully loaded.',
         };
-      } catch (error) {
-        // If GraphQL request didn't happen, try to get data from page
-        const pageData = await page.evaluate(() => {
-          // Try to find data in window object or DOM
-          const scripts = Array.from(document.querySelectorAll('script'));
-          for (const script of scripts) {
-            if (script.textContent?.includes('PullListTablePullStatsList')) {
-              return script.textContent;
+      }
+
+      // Wait a bit for chart to be fully rendered
+      await this.humanDelay(100, 200);
+
+      // Find chart bar element
+      const chartBar = await page.$('.recharts-layer.recharts-bar');
+      if (!chartBar) {
+        return {
+          success: false,
+          error: 'Chart bar element not found',
+        };
+      }
+
+      // Scroll chart into view to ensure it's visible
+      await chartBar.scrollIntoView();
+      await this.humanDelay(50, 100);
+
+      // Get bounding box for natural mouse interaction
+      const box = await chartBar.boundingBox();
+      if (!box) {
+        return {
+          success: false,
+          error: 'Could not get chart bar position',
+        };
+      }
+
+      // Calculate center point of the first visible bar
+      const centerX = box.x + box.width / 2;
+      const centerY = box.y + box.height / 2;
+
+      console.log('Moving mouse to chart bar...');
+      // Move mouse naturally to the chart bar (hover effect)
+      await page.mouse.move(centerX, centerY, { steps: 10 });
+      await this.humanDelay(100, 200);
+
+      // Verify page is still visible (not black screen)
+      const pageTitle = await page.title();
+      if (!pageTitle || pageTitle.trim() === '') {
+        return {
+          success: false,
+          error: 'Page became unresponsive after hovering over chart',
+        };
+      }
+
+      console.log('Clicking on chart bar...');
+      // Click on the chart bar with natural delay
+      await page.mouse.click(centerX, centerY, { delay: 50 });
+      console.log('Chart bar clicked');
+      await this.humanDelay(500, 800);
+
+      // Wait for table to appear after clicking (table is loaded from JS)
+      let tableHtml: string | null = null;
+
+      try {
+        console.log('Waiting for table to appear...');
+        
+        // Wait for any table-related element to appear with longer timeout
+        let tableFound = false;
+        const selectorsToTry = [
+          'table',
+          'table tbody',
+          'table thead',
+          '[class*="table"]',
+          '[class*="Table"]',
+          '[class*="TABLE"]',
+          '.table',
+          '[role="table"]',
+          '[role="grid"]',
+          'div[class*="table"]',
+        ];
+
+        // Try waiting for each selector with increasing timeout
+        for (let attempt = 0; attempt < selectorsToTry.length && !tableFound; attempt++) {
+          const selector = selectorsToTry[attempt];
+          try {
+            console.log(`Trying selector: ${selector}`);
+            await page.waitForSelector(selector, { timeout: 3000 });
+            tableFound = true;
+            console.log(`Table found with selector: ${selector}`);
+            break;
+          } catch {
+            // Continue to next selector
+          }
+        }
+
+        // If no table found, wait a bit more and check for modal/popup
+        if (!tableFound) {
+          console.log('No table found with standard selectors, checking for modal/popup...');
+          await this.humanDelay(500, 800);
+          
+          // Check if modal/popup appeared
+          const modalExists = await page.evaluate(() => {
+            const modals = document.querySelectorAll('[role="dialog"], .modal, [class*="Modal"], [class*="popup"], [class*="Popup"], [class*="drawer"], [class*="Drawer"]');
+            return modals.length > 0;
+          });
+
+          if (modalExists) {
+            console.log('Modal/popup detected, waiting for table inside...');
+            // Wait for table in modal
+            for (let attempt = 0; attempt < 5; attempt++) {
+              await this.humanDelay(300, 500);
+              const hasTable = await page.evaluate(() => {
+                const modals = document.querySelectorAll('[role="dialog"], .modal, [class*="Modal"], [class*="popup"], [class*="Popup"]');
+                for (const modal of modals) {
+                  const table = modal.querySelector('table');
+                  if (table) return true;
+                }
+                return false;
+              });
+              if (hasTable) {
+                tableFound = true;
+                break;
+              }
             }
           }
+        }
+
+        // Get table HTML
+        console.log('Extracting table HTML...');
+        tableHtml = await page.evaluate(() => {
+          // Try to find table in various locations
+          const selectors = [
+            'table',
+            '[role="table"]',
+            '[role="grid"]',
+            '.table',
+            '[class*="table"]',
+            '[class*="Table"]',
+            '[class*="TABLE"]',
+          ];
+
+          for (const selector of selectors) {
+            const table = document.querySelector(selector);
+            if (table) {
+              return table.outerHTML;
+            }
+          }
+
+          // Try to find in modal or popup
+          const modals = document.querySelectorAll(
+            '[role="dialog"], .modal, [class*="Modal"], [class*="popup"], [class*="Popup"], [class*="drawer"], [class*="Drawer"]'
+          );
+          for (const modal of modals) {
+            const table = modal.querySelector('table');
+            if (table) {
+              return table.outerHTML;
+            }
+            // Also check for div-based tables
+            const divTable = modal.querySelector('[class*="table"], [class*="Table"]');
+            if (divTable) {
+              return divTable.outerHTML;
+            }
+          }
+
+          // Try to find any element with table-like structure
+          const allElements = document.querySelectorAll('*');
+          for (const el of allElements) {
+            const className = el.className?.toString().toLowerCase() || '';
+            const id = el.id?.toLowerCase() || '';
+            if (
+              (className.includes('table') || id.includes('table')) &&
+              (el.querySelector('tr') || el.querySelector('[role="row"]'))
+            ) {
+              return el.outerHTML;
+            }
+          }
+
           return null;
         });
 
-        if (pageData) {
-          const prNumbers = this.extractPrNumbersFromText(pageData);
-          return {
-            success: true,
-            data: { source: 'page', content: pageData },
-            prNumbers,
-          };
+        if (tableHtml) {
+          console.log('Got table HTML from page');
+        } else {
+          console.warn('Table selector found but HTML is null');
+          // Try to get any visible content that might contain PR numbers
+          const pageContent = await page.evaluate(() => {
+            return document.body.innerText;
+          });
+          console.log('Page content preview:', pageContent.substring(0, 500));
         }
-
+      } catch (error) {
+        console.error('Error finding table:', error);
         return {
           success: false,
-          error: `Failed to get GraphQL data: ${
+          error: `Could not find table after clicking chart: ${
             error instanceof Error ? error.message : 'Unknown error'
           }`,
         };
       }
+
+      if (!tableHtml) {
+        return {
+          success: false,
+          error: 'Table HTML is empty or not found',
+        };
+      }
+
+      // Extract PR numbers from table HTML
+      let prNumbers: number[] = [];
+      
+      // Try extracting from table HTML structure first
+      prNumbers = this.extractPrNumbersFromTable(tableHtml);
+      
+      // Fallback to general text extraction if needed
+      if (prNumbers.length === 0) {
+        prNumbers = this.extractPrNumbersFromText(tableHtml);
+      }
+
+      return {
+        success: true,
+        data: { source: 'table', html: tableHtml },
+        prNumbers,
+      };
     } catch (error) {
       return {
         success: false,
@@ -384,6 +639,36 @@ export class FindyScraperService {
       Number.parseInt(match[1], 10),
     ).filter((num) => !Number.isNaN(num) && num >= 1000 && num < 100000);
     return [...new Set(prNumbers)].sort((a, b) => a - b);
+  }
+
+  /**
+   * Extract PR numbers from table HTML
+   */
+  private extractPrNumbersFromTable(tableHtml: string): number[] {
+    const prNumbers: number[] = [];
+    
+    // Try to extract from table cells
+    const cellRegex = /<t[dh][^>]*>([^<]*(?:\d{4,6})[^<]*)<\/t[dh]>/gi;
+    let match;
+    while ((match = cellRegex.exec(tableHtml)) !== null) {
+      const cellText = match[1];
+      const numbers = cellText.match(/\b(\d{4,6})\b/g);
+      if (numbers) {
+        numbers.forEach((num) => {
+          const prNum = Number.parseInt(num, 10);
+          if (prNum >= 1000 && prNum < 100000 && !prNumbers.includes(prNum)) {
+            prNumbers.push(prNum);
+          }
+        });
+      }
+    }
+
+    // Fallback to general text extraction
+    if (prNumbers.length === 0) {
+      return this.extractPrNumbersFromText(tableHtml);
+    }
+
+    return prNumbers.sort((a, b) => a - b);
   }
 
   /**

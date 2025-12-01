@@ -841,3 +841,46 @@ function handleModalOutsideClick(event) {
 
 // Close modal when clicking outside
 globalThis.addEventListener('click', handleModalOutsideClick);
+
+/**
+ * Handle URL query parameters for success/error messages
+ */
+function handleQueryParams() {
+  const urlParams = new URLSearchParams(globalThis.location.search);
+  const success = urlParams.get('success');
+  const error = urlParams.get('error');
+  const message = urlParams.get('message');
+  const count = urlParams.get('count');
+  const file = urlParams.get('file');
+
+  if (success === 'raw-data-saved') {
+    const prCount = count ? `Found ${count} PR number(s).` : '';
+    const fileInfo = file ? `\n\nFile saved: data/raw/${file}` : '';
+    SwalHelper.success(
+      'Raw Data Saved!',
+      `Raw data has been saved successfully.${prCount}${fileInfo}\n\nYou can review the file before processing.`,
+    );
+    // Clean URL
+    const newUrl = globalThis.location.pathname;
+    globalThis.history.replaceState({}, '', newUrl);
+  } else if (success === 'raw-data') {
+    SwalHelper.success(
+      'Success!',
+      `Processed ${count || 0} PR(s) successfully.`,
+    );
+    const newUrl = globalThis.location.pathname;
+    globalThis.history.replaceState({}, '', newUrl);
+  } else if (error) {
+    const errorMessage = message || 'An error occurred';
+    SwalHelper.error('Error!', errorMessage);
+    const newUrl = globalThis.location.pathname;
+    globalThis.history.replaceState({}, '', newUrl);
+  }
+}
+
+// Handle query params when page loads
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', handleQueryParams);
+} else {
+  handleQueryParams();
+}

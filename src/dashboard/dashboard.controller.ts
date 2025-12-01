@@ -272,9 +272,40 @@ export class DashboardController {
         );
       }
 
-      // Extract PR numbers from scraped data
-      const prNumbers = scrapeResult.prNumbers || [];
+      // Save raw data to JSON file
+      const { writeFileSync, existsSync, mkdirSync } = await import('node:fs');
+      const { join } = await import('node:path');
+      const rawDataDir = join(process.cwd(), 'data', 'raw');
+      
+      if (!existsSync(rawDataDir)) {
+        mkdirSync(rawDataDir, { recursive: true });
+      }
 
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `raw-data-${timestamp}.json`;
+      const filePath = join(rawDataDir, fileName);
+
+      const rawDataToSave = {
+        url: findyUrl,
+        scrapedAt: new Date().toISOString(),
+        success: scrapeResult.success,
+        data: scrapeResult.data,
+        prNumbers: scrapeResult.prNumbers || [],
+        error: scrapeResult.error,
+      };
+
+      writeFileSync(filePath, JSON.stringify(rawDataToSave, null, 2), 'utf-8');
+
+      const prNumbers = scrapeResult.prNumbers || [];
+      const prCount = prNumbers.length;
+
+      // Return success with file information
+      return res.redirect(
+        `/dashboard?success=raw-data-saved&count=${prCount}&file=${encodeURIComponent(fileName)}`,
+      );
+
+      // TODO: Uncomment below to process data and call GitHub API
+      /*
       if (prNumbers.length === 0) {
         return res.redirect(
           '/dashboard?error=no-pr-numbers&message=No PR numbers found in scraped data',
@@ -314,6 +345,7 @@ export class DashboardController {
       return res.redirect(
         `/dashboard?success=raw-data&count=${prNumbers.length}`,
       );
+      */
     } catch (error) {
       console.error('Error processing raw data:', error);
       return res.redirect(
