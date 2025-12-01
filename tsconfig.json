@@ -21,6 +21,7 @@
       "@pr/*": ["./src/pr/*"],
       "@storage/*": ["./src/storage/*"],
       "@timeline/*": ["./src/timeline/*"],
+      "@scraper/*": ["./src/scraper/*"],
       "@shared/*": ["./src/types/*"],
       "@utils/*": ["./src/utils/*"],
       "@workflow/*": ["./src/workflow/*"]

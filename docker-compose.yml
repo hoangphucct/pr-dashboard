@@ -19,6 +19,9 @@ services:
       - ./.env:/app/.env
       - ./data:/app/data
       - /app/node_modules
+    environment:
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
     command: npm run start:dev
     restart: unless-stopped
     networks:

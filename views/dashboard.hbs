@@ -10,6 +10,10 @@
 <body>
   <!-- Load Chart.js first -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Load SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Load SweetAlert2 Helper -->
+  <script src="/swal-helper.js"></script>
   <div class="container">
     <h1>PR Cycle-Time Dashboard</h1>
     <!-- Form để nhập PR IDs -->
@@ -21,11 +25,20 @@
         </div>
         <button type="submit">Get Data</button>
       </form>
-      <div class="update-all-section">
-        <form method="POST" action="/dashboard/update-all-today" class="update-all-form">
-          <button type="submit" class="btn-update-all">
-            Update All PRs for Today
-          </button>
+      <div class="raw-data-section">
+        <form method="POST" action="/dashboard/raw-data" class="raw-data-form" id="rawDataForm">
+          <div class="form-group">
+            <label for="findyUrl">Nhập URL Findy Team:</label>
+            <input 
+              type="url" 
+              id="findyUrl" 
+              name="findyUrl" 
+              placeholder="https://findy-team.io/team/analytics/cycletime?monitoring_id=12045&range=last_month" 
+              required
+              pattern="https://findy-team\.io/team/analytics/cycletime\?monitoring_id=\d+&range=\w+"
+            >
+          </div>
+          <button type="submit" class="btn-raw-data">Raw Data</button>
         </form>
       </div>
     </div>
@@ -37,7 +50,7 @@
       <select id="dateSelect" onchange="window.location.href='/dashboard?date=' + this.value">
         <option value="">Hôm nay</option>
         {{#each availableDates}}
-          <option value="{{this}}" {{#if (eq this ../selectedDate)}}selected{{/if}}>{{this}}</option>
+        <option value="{{this}}" {{#if (eq this ../selectedDate)}}selected{{/if}}>{{this}}</option>
         {{/each}}
       </select>
     </div>
@@ -67,13 +80,13 @@
             <td><strong>#{{prNumber}}</strong></td>
             <td class="title-cell">
               <div class="title-content">
-                {{#if url}}
-                  <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{title}}</a>
-                {{else}}
-                  {{title}}
+              {{#if url}}
+                <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{title}}</a>
+              {{else}}
+                {{title}}
                 {{/if}}
                 {{#if hasForcePushed}}
-                  <span class="force-pushed-badge" title="This PR has been force-pushed">⚠️ Force Pushed</span>
+                  <span class="force-pushed-badge" title="This PR has been force-pushed">Force Pushed</span>
                 {{/if}}
               </div>
               {{#if labels}}
@@ -116,6 +129,9 @@
                   Updated
                 </button>
                 {{/if}}
+                <button class="btn-delete-pr" data-pr-number="{{prNumber}}" onclick="deletePr(this)" title="Delete this PR record">
+                  <span class="delete-text">Delete</span>
+                </button>
               </div>
             </td>
           </tr>

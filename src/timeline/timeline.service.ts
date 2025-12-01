@@ -18,6 +18,35 @@ export class TimelineService {
   constructor(private readonly commitService: CommitService) {}
 
   /**
+   * Build event URL from PR URL and event ID
+   */
+  private buildEventUrl(prUrl: string, eventId?: string | number): string {
+    return eventId ? `${prUrl}#event-${eventId}` : prUrl;
+  }
+
+  /**
+   * Build review URL from PR URL and review ID
+   */
+  private buildReviewUrl(
+    prUrl: string,
+    reviewId: number,
+    htmlUrl?: string,
+  ): string | undefined {
+    return (
+      htmlUrl || (prUrl ? `${prUrl}#pullrequestreview-${reviewId}` : undefined)
+    );
+  }
+
+  /**
+   * Check if a user is Copilot bot
+   */
+  private isCopilotUser(login?: string): boolean {
+    return (
+      login === 'github-actions[bot]' || (login?.includes('copilot') ?? false)
+    );
+  }
+
+  /**
    * Build timeline for a PR
    */
   buildTimeline(
@@ -52,6 +81,9 @@ export class TimelineService {
 
     // Add first comment
     this.addFirstComment(prDetails, prUrl, timelineItems);
+
+    // Add Devin review comments as review_requested events
+    this.addDevinReviewComments(prDetails, prUrl, timelineItems);
 
     // Add review_requested events
     this.addReviewRequestedEvents(sortedEvents, prUrl, timelineItems);
@@ -134,15 +166,12 @@ export class TimelineService {
       (e) => e.event === 'ready_for_review',
     );
     if (readyForReviewEvent) {
-      const eventUrl = readyForReviewEvent.id
-        ? `${prUrl}#event-${readyForReviewEvent.id}`
-        : prUrl;
       timelineItems.push({
         type: 'ready_for_review',
         title: 'Marked this pull request as ready for review',
         time: readyForReviewEvent.created_at,
         actor: readyForReviewEvent.actor?.login,
-        url: eventUrl,
+        url: this.buildEventUrl(prUrl, readyForReviewEvent.id),
       });
     }
   }
@@ -192,20 +221,28 @@ export class TimelineService {
       (a, b) => a.timestamp - b.timestamp,
     );
 
+    // Filter out "Devin review" comments from first comment selection
+    const commentsExcludingDevinReview = allComments.filter((comment) => {
+      const body = (comment.body || '').trim().toLowerCase();
+      return !body.includes('devin review');
+    });
+
     // Find first comment - prioritize "Everything looks good!" comment
     let firstComment: CommentWithType | null = null;
     let commentTitle: string;
 
-    const everythingLooksGoodComment = allComments.find((comment) => {
-      const body = (comment.body || '').trim().toLowerCase();
-      return body.includes('everything looks good');
-    });
+    const everythingLooksGoodComment = commentsExcludingDevinReview.find(
+      (comment) => {
+        const body = (comment.body || '').trim().toLowerCase();
+        return body.includes('everything looks good');
+      },
+    );
 
     if (everythingLooksGoodComment) {
       firstComment = everythingLooksGoodComment;
       commentTitle = 'First Review comment';
-    } else if (allComments.length > 0) {
-      firstComment = allComments[0];
+    } else if (commentsExcludingDevinReview.length > 0) {
+      firstComment = commentsExcludingDevinReview[0];
       commentTitle =
         firstComment.commentType === 'review'
           ? 'First review comment'
@@ -237,6 +274,82 @@ export class TimelineService {
   }
 
   /**
+   * Add Devin review comments as review_requested events
+   */
+  private addDevinReviewComments(
+    prDetails: GitHubPullRequestDetail,
+    prUrl: string,
+    timelineItems: TimelineItem[],
+  ): void {
+    const reviews = prDetails.reviews || [];
+    const issueComments = prDetails.comments || [];
+
+    // Collect all reviews with "Devin review" in body
+    const devinReviewComments: CommentWithType[] = reviews
+      .filter(
+        (review) =>
+          review.submitted_at &&
+          review.body &&
+          review.body.trim().length > 0 &&
+          review.body.trim().toLowerCase().includes('devin review'),
+      )
+      .map((review) => ({
+        id: review.id,
+        submitted_at: review.submitted_at,
+        body: review.body,
+        html_url: review.html_url,
+        user: review.user,
+        commentType: 'review' as const,
+        timestamp: new Date(review.submitted_at).getTime(),
+      }));
+
+    // Collect all issue comments with "Devin review" in body
+    const devinIssueComments: CommentWithType[] = issueComments
+      .filter(
+        (comment) =>
+          comment.created_at &&
+          comment.body &&
+          comment.body.trim().toLowerCase().includes('devin review'),
+      )
+      .map((comment) => ({
+        id: comment.id,
+        created_at: comment.created_at,
+        body: comment.body,
+        html_url: comment.html_url,
+        user: comment.user,
+        commentType: 'issue' as const,
+        timestamp: new Date(comment.created_at).getTime(),
+      }));
+
+    // Combine and sort by timestamp
+    const allDevinComments = [
+      ...devinReviewComments,
+      ...devinIssueComments,
+    ].sort((a, b) => a.timestamp - b.timestamp);
+
+    // Add each Devin review comment as review_requested event
+    allDevinComments.forEach((comment) => {
+      let commentUrl: string | undefined;
+      if (comment.commentType === 'review' && comment.html_url) {
+        commentUrl = comment.html_url;
+      } else if (comment.html_url) {
+        commentUrl = comment.html_url;
+      } else if (prUrl && comment.id) {
+        commentUrl = `${prUrl}#issuecomment-${comment.id}`;
+      }
+
+      const commentTime = comment.created_at || comment.submitted_at || '';
+      timelineItems.push({
+        type: 'review_requested',
+        title: 'Requested a review Devin review',
+        time: commentTime,
+        actor: comment.user?.login,
+        url: commentUrl,
+      });
+    });
+  }
+
+  /**
    * Add review_requested events to timeline
    */
   private addReviewRequestedEvents(
@@ -248,13 +361,12 @@ export class TimelineService {
       (e) => e.event === 'review_requested',
     );
     reviewRequestedEvents.forEach((event) => {
-      const eventUrl = event.id ? `${prUrl}#event-${event.id}` : prUrl;
       timelineItems.push({
         type: 'review_requested',
         title: 'Requested a review',
         time: event.created_at,
         actor: event.actor?.login,
-        url: eventUrl,
+        url: this.buildEventUrl(prUrl, event.id),
       });
     });
   }
@@ -273,13 +385,14 @@ export class TimelineService {
     );
 
     let hasFirstApproval = false;
+    let hasFirstReviewComment = false;
     sortedReviews.forEach((review) => {
+      const isCopilot = this.isCopilotUser(review.user?.login);
+      const reviewUrl = this.buildReviewUrl(prUrl, review.id, review.html_url);
+
       if (review.state === 'APPROVED') {
         const isFirstApproval = !hasFirstApproval;
         hasFirstApproval = true;
-        const isCopilot =
-          review.user?.login === 'github-actions[bot]' ||
-          review.user?.login?.includes('copilot');
 
         let approvalTitle: string;
         if (isFirstApproval) {
@@ -290,9 +403,6 @@ export class TimelineService {
           approvalTitle = 'Approved';
         }
 
-        const reviewUrl =
-          review.html_url ||
-          (prUrl ? `${prUrl}#pullrequestreview-${review.id}` : undefined);
         timelineItems.push({
           type: 'approved',
           title: approvalTitle,
@@ -301,15 +411,21 @@ export class TimelineService {
           url: reviewUrl,
         });
       } else if (review.state === 'COMMENTED') {
-        const isCopilot =
-          review.user?.login === 'github-actions[bot]' ||
-          review.user?.login?.includes('copilot');
-        const reviewUrl =
-          review.html_url ||
-          (prUrl ? `${prUrl}#pullrequestreview-${review.id}` : undefined);
+        const isFirstReviewComment = !hasFirstReviewComment;
+        hasFirstReviewComment = true;
+
+        let reviewCommentTitle: string;
+        if (isFirstReviewComment) {
+          reviewCommentTitle = 'First review comment';
+        } else if (isCopilot) {
+          reviewCommentTitle = 'Copilot AI reviewed';
+        } else {
+          reviewCommentTitle = 'Review comment';
+        }
+
         timelineItems.push({
           type: 'review_comment',
-          title: isCopilot ? 'Copilot AI reviewed' : 'Review comment',
+          title: reviewCommentTitle,
           time: review.submitted_at,
           actor: review.user?.login,
           url: reviewUrl,
@@ -364,7 +480,7 @@ export class TimelineService {
       if (commitSha && owner && repo) {
         eventUrl = this.commitService.buildCommitUrl(owner, repo, commitSha);
       } else if (event.id) {
-        eventUrl = `${prUrl}#event-${event.id}`;
+        eventUrl = this.buildEventUrl(prUrl, event.id);
       }
 
       timelineItems.push({

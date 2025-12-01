@@ -70,19 +70,11 @@ export class HandlebarsHelper {
 
     // Format time with business days helper
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    hbs.default.registerHelper(
-      'formatTimeWithDays',
-      (hours: string | number) => {
-        const h = Number.parseInt(hours as string, 10);
-        if (h <= 0) {
-          return '0h';
-        }
-
-        // 24 hours per business day
-        const days = Math.round((h / 24) * 10) / 10;
-        return `${hours}h (${days}d)`;
-      },
-    );
+    hbs.default.registerHelper('formatTimeWithDays', (hours: string) => {
+      // 24 hours per business day
+      const days = (hours as any) / 24;
+      return `${hours}h (${days?.toFixed(2)}d)`;
+    });
 
     // OR helper - returns first truthy value or executes block
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call

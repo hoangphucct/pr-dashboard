@@ -90,7 +90,7 @@ table {
 th,
 td {
   border: 1px solid #ddd;
-  padding: 12px;
+  padding: 10px;
   text-align: center;
 }
 
@@ -186,13 +186,17 @@ a:hover {
   text-align: left;
   max-width: 300px;
   word-wrap: break-word;
-  vertical-align: top;
 }
 
 .workflow-actions {
   display: flex;
-  gap: 8px;
+  gap: 3px;
   align-items: center;
+  flex-direction: column;
+}
+
+.workflow-actions button {
+  width: 100%;
 }
 
 .btn-workflow {
@@ -240,6 +244,61 @@ a:hover {
 
 .btn-update-error {
   background-color: #dc3545 !important;
+}
+
+.btn-delete-pr {
+  background-color: #dc3545;
+  color: #ffffff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1;
+}
+
+.btn-delete-pr:hover:not(:disabled) {
+  background-color: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.btn-delete-pr:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(220, 53, 69, 0.2);
+}
+
+.btn-delete-pr:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-delete-pr .delete-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.btn-delete-pr .delete-text {
+  font-size: 12px;
+  line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .btn-delete-pr .delete-text {
+    display: none;
+  }
+
+  .btn-delete-pr {
+    padding: 6px 10px;
+  }
 }
 
 /* Modal Styles */
@@ -470,26 +529,51 @@ a:hover {
   margin-top: 5px;
 }
 
-/* Update All PRs Button Styles */
-.update-all-section {
+/* Raw Data Section Styles */
+.raw-data-section {
   margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ddd;
 }
 
-.update-all-form {
-  display: inline;
+.raw-data-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
-.btn-update-all {
+.raw-data-form .form-group {
+  margin-bottom: 0;
+}
+
+.raw-data-form input[type="url"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.btn-raw-data {
   background-color: #28a745;
-  color: #ffffff;
-  padding: 10px 20px;
+  color: white;
   border: none;
-  border-radius: 5px;
+  padding: 12px 24px;
+  border-radius: 4px;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  align-self: flex-start;
+  transition: background-color 0.2s;
 }
 
-.btn-update-all:hover {
+.btn-raw-data:hover {
   background-color: #218838;
+}
+
+.btn-raw-data:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
 }
 
 /* Title Cell Styles */
@@ -506,16 +590,15 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 2px 10px;
+  border-radius: 35px;
   font-size: 12px;
   font-weight: 600;
-  background: linear-gradient(135deg, #e65100 0%, #f57c00 100%);
-  color: #ffffff;
+  background: #ff0000;
+  color: #fff;
   white-space: nowrap;
   border: 1px solid #e65100;
   box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
-  margin-left: 8px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   transition: all 0.2s ease;
 }

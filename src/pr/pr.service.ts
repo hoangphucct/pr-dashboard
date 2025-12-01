@@ -72,6 +72,7 @@ export class PrService {
         hasForcePushed,
       };
     }
+
     const commitToOpen = this.calculateCommitToOpen(prDetails, events);
     const openToReview = this.calculateOpenToReview(prDetails, events);
     const reviewToApproval = this.calculateReviewToApproval(prDetails);
@@ -241,19 +242,35 @@ export class PrService {
       return 0;
     }
 
-    const firstReviewDate = Math.min(...reviewDates);
+    // Find first review date that occurs AFTER ready_for_review
+    // If all reviews are before ready_for_review, return 0
+    const reviewsAfterReady = reviewDates.filter(
+      (date) => date >= readyForReviewDate,
+    );
+
+    if (reviewsAfterReady.length === 0) {
+      // All reviews happened before ready_for_review, so openToReview = 0
+      // This means reviews were done before PR was marked as ready
+      return 0;
+    }
+
+    const firstReviewDate = Math.min(...reviewsAfterReady);
 
     // Calculate business hours between specific timestamps
     const startDate = new Date(readyForReviewDate);
     const endDate = new Date(firstReviewDate);
+
+    // Ensure endDate is after startDate
+    if (endDate <= startDate) {
+      return 0;
+    }
+
     const businessHours = this.businessDaysService.calculateBusinessHours(
       startDate,
       endDate,
     );
 
-    // Round to 2 decimal places
-    const rounded = Math.round(businessHours * 100) / 100;
-    return rounded;
+    return Math.round(businessHours * 100) / 100;
   }
 
   /**

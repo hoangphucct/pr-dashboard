@@ -11,6 +11,8 @@ import { WorkflowValidationService } from '@workflow/workflow-validation.service
 import { CommitService } from '@commit/commit.service';
 import { TimelineService } from '@timeline/timeline.service';
 import { BusinessDaysService } from '@utils/business-days.service';
+import { ScraperService } from '@scraper/scraper.service';
+import { FindyScraperService } from '@scraper/findy-scraper.service';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { BusinessDaysService } from '@utils/business-days.service';
     CommitService,
     TimelineService,
     BusinessDaysService,
+    ScraperService,
+    FindyScraperService,
   ],
 })
 export class AppModule {}

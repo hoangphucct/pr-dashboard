@@ -55,7 +55,10 @@ export class WorkflowValidationService {
     const issues: ValidationIssue[] = [];
 
     // Check for missing steps
-    const missingStepsIssues = this.checkMissingSteps(timeline, workflow.status);
+    const missingStepsIssues = this.checkMissingSteps(
+      timeline,
+      workflow.status,
+    );
     issues.push(...missingStepsIssues);
 
     // Check for wrong order
@@ -105,13 +108,8 @@ export class WorkflowValidationService {
       }
     }
 
-    if (!timelineTypes.has('comment') && !timelineTypes.has('review_comment')) {
-      issues.push({
-        type: 'missing_step',
-        severity: 'warning',
-        message: 'Missing review comment step',
-      });
-    }
+    // Review comment is optional - reviewer can approve directly without comment
+    // So we don't check for missing review comment
 
     if (!timelineTypes.has('approved')) {
       issues.push({
@@ -196,25 +194,48 @@ export class WorkflowValidationService {
       }
     }
 
-    // Check if approved appears before comment
+    // Check if PR is merged without approval
     const approvedItems = sortedTimeline.filter(
       (item) => item.type === 'approved',
     );
-    if (approvedItems.length > 0 && commentItems.length > 0) {
-      const firstApproved = approvedItems[0];
-      const lastComment = commentItems[commentItems.length - 1];
+    const mergedItems = sortedTimeline.filter((item) => item.type === 'merged');
 
-      if (
-        new Date(firstApproved.time).getTime() <
-        new Date(lastComment.time).getTime()
-      ) {
+    if (
+      workflow.status === 'Merged' &&
+      mergedItems.length > 0 &&
+      approvedItems.length === 0
+    ) {
+      issues.push({
+        type: 'missing_step',
+        severity: 'error',
+        message: 'PR was merged without approval',
+        details: {
+          mergedTime: mergedItems[0].time,
+        },
+      });
+    }
+
+    // Check if there are review comments but no approval after a long time (48 hours)
+    // Only check for Open PRs (not merged/closed)
+    if (
+      workflow.status === 'Open' &&
+      commentItems.length > 0 &&
+      approvedItems.length === 0
+    ) {
+      const firstComment = commentItems[0];
+      const commentTime = new Date(firstComment.time).getTime();
+      const now = Date.now();
+      const hoursSinceComment = (now - commentTime) / (1000 * 60 * 60);
+
+      // If comment exists for more than 48 hours without approval, it's a warning
+      if (hoursSinceComment > 48) {
         issues.push({
-          type: 'wrong_order',
-          severity: 'error',
-          message: `Approved (${firstApproved.time}) appears before review comment (${lastComment.time})`,
+          type: 'missing_step',
+          severity: 'warning',
+          message: `Review comment exists for ${Math.round(hoursSinceComment)} hours without approval`,
           details: {
-            approvedTime: firstApproved.time,
-            commentTime: lastComment.time,
+            firstCommentTime: firstComment.time,
+            hoursSinceComment: Math.round(hoursSinceComment),
           },
         });
       }
@@ -222,5 +243,4 @@ export class WorkflowValidationService {
 
     return issues;
   }
-
 }

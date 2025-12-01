@@ -12,7 +12,7 @@ import type { TimelineItem } from '@shared/timeline.types';
 
 /**
  * WorkflowData now only contains timeline
- * All other data (prNumber, title, author, url, status, metrics, etc.) 
+ * All other data (prNumber, title, author, url, status, metrics, etc.)
  * is stored in PrMetrics in data-{date}.json
  */
 export interface WorkflowData {
@@ -57,10 +57,7 @@ export class WorkflowStorageService {
   /**
    * Save workflow data (timeline) for a PR
    */
-  saveWorkflow(
-    prNumber: number,
-    workflow: WorkflowData,
-  ): void {
+  saveWorkflow(prNumber: number, workflow: WorkflowData): void {
     const filePath = this.getFilePath(prNumber);
     const existingData = this.loadWorkflow(prNumber);
 
