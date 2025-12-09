@@ -1,29 +1,65 @@
 version: '3.8'
 
 services:
-  pr-dashboard:
+  # Backend API Service (NestJS)
+  backend:
     build:
       context: .
       dockerfile: Dockerfile
-      target: builder
-    container_name: pr-dashboard
+      target: backend-builder
+    container_name: pr-dashboard-backend
     ports:
       - '3000:3000'
     volumes:
-      - ./src:/app/src
-      - ./views:/app/views
-      - ./public:/app/public
-      - ./package.json:/app/package.json
-      - ./tsconfig.json:/app/tsconfig.json
-      - ./nest-cli.json:/app/nest-cli.json
-      - ./.env:/app/.env
-      - ./data:/app/data
+      - ./backend/src:/app/src
+      - ./backend/package.json:/app/package.json
+      - ./backend/package-lock.json:/app/package-lock.json
+      - ./backend/tsconfig.json:/app/tsconfig.json
+      - ./backend/nest-cli.json:/app/nest-cli.json
+      - ./backend/data:/app/data
+      - ./backend/public:/app/public
       - /app/node_modules
     environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - FRONTEND_URL=http://localhost:3001
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      - PUPPETEER_HEADLESS=${PUPPETEER_HEADLESS:-true}
+      - API_KEY=${API_KEY:-}
     command: npm run start:dev
     restart: unless-stopped
+    networks:
+      - pr-dashboard-network
+
+  # Frontend Service (Next.js)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      target: development
+    container_name: pr-dashboard-frontend
+    ports:
+      - '3001:3001'
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/package-lock.json:/app/package-lock.json
+      - ./frontend/next.config.ts:/app/next.config.ts
+      - ./frontend/tailwind.config.ts:/app/tailwind.config.ts
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - NEXT_PUBLIC_API_KEY=${API_KEY:-}
+      - WATCHPACK_POLLING=true
+    command: npm run dev
+    restart: unless-stopped
+    depends_on:
+      - backend
     networks:
       - pr-dashboard-network
 

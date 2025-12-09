@@ -1,7 +1,47 @@
+# ==========================================
+# Backend (NestJS)
+# ==========================================
+
 # compiled output
-/dist
-/node_modules
-/build
+/backend/dist
+/backend/node_modules
+/backend/build
+
+# data directory
+/backend/data
+
+# dotenv environment variable files
+/backend/.env
+/backend/.env.development.local
+/backend/.env.test.local
+/backend/.env.production.local
+/backend/.env.local
+
+# ==========================================
+# Frontend (Next.js)
+# ==========================================
+
+# dependencies
+/frontend/node_modules
+
+# next.js build output
+/frontend/.next
+/frontend/out
+
+# production build
+/frontend/build
+
+# dotenv environment variable files
+/frontend/.env
+/frontend/.env.development.local
+/frontend/.env.test.local
+/frontend/.env.production.local
+/frontend/.env.local
+/frontend/.env*.local
+
+# ==========================================
+# Common
+# ==========================================
 
 # Logs
 logs
@@ -14,6 +54,7 @@ lerna-debug.log*
 
 # OS
 .DS_Store
+Thumbs.db
 
 # Tests
 /coverage
@@ -30,12 +71,9 @@ lerna-debug.log*
 
 # IDE - VSCode
 .vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode
 
-# dotenv environment variable files
+# Root level env files
 .env
 .env.development.local
 .env.test.local
@@ -46,9 +84,6 @@ lerna-debug.log*
 .temp
 .tmp
 
-# data directory
-/data
-
 # Runtime data
 pids
 *.pid
@@ -58,4 +93,9 @@ pids
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
-.vscode
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PR Cycle-Time Dashboard API</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .container {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        padding: 40px;
+        max-width: 600px;
+        width: 100%;
+        text-align: center;
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 2.5rem;
+      }
+      .subtitle {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 1.1rem;
+      }
+      .status {
+        display: inline-block;
+        background: #10b981;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        margin-bottom: 30px;
+      }
+      .info {
+        background: #f3f4f6;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        text-align: left;
+      }
+      .info h2 {
+        color: #333;
+        margin-bottom: 15px;
+        font-size: 1.3rem;
+      }
+      .info p {
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 10px;
+      }
+      .endpoint {
+        background: #1f2937;
+        color: #10b981;
+        padding: 12px;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        margin: 10px 0;
+        word-break: break-all;
+      }
+      .warning {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 4px;
+        text-align: left;
+      }
+      .warning strong {
+        color: #92400e;
+      }
+      .footer {
+        margin-top: 30px;
+        color: #9ca3af;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚀 PR Dashboard API</h1>
+      <p class="subtitle">Pull Request Cycle-Time Analytics API</p>
+      <div class="status">● Online</div>
+
+      <div class="info">
+        <h2>📋 API Information</h2>
+        <p><strong>Version:</strong> 1.0.0</p>
+        <p><strong>Status:</strong> Running</p>
+        <p><strong>Environment:</strong> Production</p>
+      </div>
+
+      <div class="info">
+        <h2>🔐 Security</h2>
+        <p>This API is protected and requires authentication.</p>
+        <p>All endpoints require a valid API key in the request header:</p>
+        <div class="endpoint">X-API-Key: your-api-key</div>
+        <p>or</p>
+        <div class="endpoint">Authorization: Bearer your-api-key</div>
+      </div>
+
+      <div class="info">
+        <h2>📡 Available Endpoints</h2>
+        <p><strong>Dashboard:</strong></p>
+        <div class="endpoint">GET /dashboard</div>
+        <div class="endpoint">POST /dashboard/get-data</div>
+        <div class="endpoint">GET /dashboard/timeline/:prNumber</div>
+        <div class="endpoint">DELETE /dashboard/pr/:prNumber</div>
+        <p style="margin-top: 15px"><strong>Raw Data:</strong></p>
+        <div class="endpoint">GET /raw-data</div>
+        <div class="endpoint">POST /raw-data</div>
+      </div>
+
+      <div class="warning">
+        <strong>⚠️ Security Notice:</strong>
+        <p>
+          Unauthorized access attempts are logged and may result in IP blocking. Please ensure you
+          have proper authorization before accessing this API.
+        </p>
+      </div>
+
+      <div class="footer">
+        <p>For documentation, please contact the API administrator.</p>
+        <p style="margin-top: 10px">© 2025 PR Dashboard API</p>
+      </div>
+    </div>
+  </body>
+</html>
+

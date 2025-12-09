@@ -1,146 +1,352 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# PR Cycle-Time Dashboard
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A full-stack application to track and visualize Pull Request cycle time metrics from GitHub.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-PR Dashboard - A NestJS application to track and visualize Pull Request cycle time metrics from GitHub.
-
-### Features
+## Features
 
 - **Calculate PR Metrics**: Automatically calculates 4 key metrics:
-  - **Commit to Open**: Time from first commit to when PR was last opened
+  - **Commit to Open**: Time from first commit to when PR was opened
   - **Open to Review**: Time from PR open to first review comment
   - **Review to Approval**: Time from first review comment to last approval
   - **Approval to Merge**: Time from last approval to merge
 
-- **Data Storage**: Saves metrics as JSON files, one per day (overwrites same day, creates new for different days)
+- **Data Storage**: Saves metrics as JSON files, one per day
 
 - **Historical Data**: View metrics from previous days
 
 - **Visualization**: Interactive charts showing workflow timeline for each PR
 
-## Project setup
+- **Raw Data Scraping**: Scrape PR data from Findy Team analytics
 
-```bash
-$ npm install
+- **Workflow Validation**: Detect issues in PR workflow (missing steps, wrong order, abnormal time)
+
+## Tech Stack
+
+### Backend
+- **NestJS** - Node.js framework
+- **TypeScript** - Type-safe JavaScript
+- **Puppeteer** - Web scraping for Findy Team
+
+### Frontend
+- **Next.js 15** - React framework with App Router
+- **NextUI** - UI component library
+- **Tailwind CSS** - Utility-first CSS
+- **React Query** - Data fetching and caching
+- **Chart.js** - Data visualization
+
+## Project Structure
+
+```
+pr-dashboard/
+├── backend/                 # NestJS API
+│   ├── src/
+│   │   ├── dashboard/       # Dashboard API endpoints
+│   │   ├── raw-data/        # Raw data API endpoints
+│   │   ├── github/          # GitHub API integration
+│   │   ├── pr/              # PR metrics calculation
+│   │   ├── timeline/        # Timeline building
+│   │   ├── workflow/        # Workflow validation
+│   │   ├── storage/         # Data storage
+│   │   ├── scraper/         # Web scraping
+│   │   └── types/           # TypeScript types
+│   ├── data/                # JSON data files (gitignored)
+│   └── package.json
+├── frontend/                # Next.js Frontend
+│   ├── src/
+│   │   ├── app/             # Next.js App Router pages
+│   │   ├── components/      # React components
+│   │   ├── hooks/           # Custom React hooks
+│   │   ├── lib/             # API client & utilities
+│   │   └── types/           # TypeScript types
+│   └── package.json
+├── docker-compose.yml       # Docker development setup
+├── Dockerfile               # Backend Dockerfile
+├── Dockerfile.frontend      # Frontend Dockerfile
+└── README.md
 ```
 
-## Configuration
+## Prerequisites
 
-Create a `.env` file in the root directory with the following variables:
+- **Node.js** >= 20.x
+- **npm** >= 10.x
+- **Docker** & **Docker Compose** (optional, for containerized development)
+
+## Installation
+
+### Option 1: Local Development
+
+#### 1. Clone the repository
+
+```bash
+git clone <repository-url>
+cd pr-dashboard
+```
+
+#### 2. Setup Backend
+
+```bash
+cd backend
+npm install
+```
+
+Create `.env` file in the `backend` directory:
 
 ```env
 GITHUB_OWNER=your-github-username-or-org
 GITHUB_REPO=your-repository-name
 GITHUB_TOKEN=your-github-personal-access-token
 PORT=3000
+FRONTEND_URL=http://localhost:3001
+API_KEY=your-secret-api-key-here
 ```
 
-### Getting a GitHub Token
+**Security Note:** Set `API_KEY` to a strong random string. This key is required to access protected API endpoints.
 
-1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-2. Generate a new token with `repo` scope
-3. Copy the token and add it to your `.env` file
+#### 3. Setup Frontend
 
-## Usage
-
-1. Start the application:
 ```bash
+cd frontend
+npm install
+```
+
+Create `.env.local` file in the `frontend` directory:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_API_KEY=your-secret-api-key-here
+```
+
+**Note:** `NEXT_PUBLIC_API_KEY` must match the `API_KEY` set in the backend `.env` file.
+
+#### 4. Run the applications
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
 npm run start:dev
 ```
 
-2. Open your browser and navigate to `http://localhost:3000/dashboard`
-
-3. Enter PR IDs (comma-separated) in the input field, e.g., `1,2,3,4,5`
-
-4. Click "Get Data" to fetch and calculate metrics from GitHub
-
-5. View the results in the dashboard with charts and tables
-
-6. Use the date selector to view historical data from previous days
-
-## Compile and run the project
-
+**Terminal 2 - Frontend:**
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cd frontend
+npm run dev
 ```
 
-## Run tests
+#### 5. Access the application
+
+- **Frontend**: http://localhost:3001
+- **Backend API**: http://localhost:3000
+
+---
+
+### Option 2: Docker Development
+
+#### 1. Clone the repository
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+git clone <repository-url>
+cd pr-dashboard
 ```
 
-## Deployment
+#### 2. Create environment files
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Create `backend/.env`:
+```env
+GITHUB_OWNER=your-github-username-or-org
+GITHUB_REPO=your-repository-name
+GITHUB_TOKEN=your-github-personal-access-token
+```
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+#### 3. Start with Docker Compose
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker compose up -d
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+This will start:
+- **Backend** on http://localhost:3000
+- **Frontend** on http://localhost:3001
 
-## Resources
+#### 4. View logs
 
-Check out a few resources that may come in handy when working with NestJS:
+```bash
+# All services
+docker compose logs -f
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+# Backend only
+docker compose logs -f backend
 
-## Support
+# Frontend only
+docker compose logs -f frontend
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+#### 5. Stop services
 
-## Stay in touch
+```bash
+docker compose down
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
+
+## Getting a GitHub Token
+
+1. Go to **GitHub Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
+2. Click **"Generate new token (classic)"**
+3. Select scopes:
+   - `repo` - Full control of private repositories
+4. Copy the token and add it to your `.env` file
+
+## Usage
+
+### Dashboard
+
+1. Open http://localhost:3001/dashboard
+2. Enter PR IDs (comma-separated), e.g., `1,2,3,4,5`
+3. Click **"Get Data"** to fetch metrics from GitHub
+4. View results in tables and charts
+5. Click **"Details"** to see PR workflow timeline
+6. Use date selector to view historical data
+
+### Raw Data
+
+1. Open http://localhost:3001/raw-data
+2. Enter Findy Team URL
+3. Click **"Process Raw Data"** to scrape and save data
+4. Select saved files to view PR data
+
+## Security Features
+
+### API Key Authentication
+- All protected endpoints require a valid API key
+- API key can be sent via:
+  - Header: `X-API-Key: your-api-key`
+  - Header: `Authorization: Bearer your-api-key`
+
+### Rate Limiting
+- **10 requests per second** per IP
+- **100 requests per minute** per IP
+- **1000 requests per hour** per IP
+- Prevents API abuse and DDoS attacks
+
+### CORS Protection
+- Only allows requests from configured `FRONTEND_URL`
+- Blocks unauthorized cross-origin requests
+
+### Security Headers
+- Helmet.js security headers enabled
+- Content Security Policy (CSP) configured
+- XSS and clickjacking protection
+
+### Development vs Production
+- **Development**: If `API_KEY` is not set, API is accessible without authentication
+- **Production**: `API_KEY` is **required** - all requests without valid key are rejected
+
+## API Endpoints
+
+### Public Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/` | API information page | No |
+| GET | `/health` | Health check endpoint | No |
+
+### Dashboard API (Protected)
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/dashboard` | Get dashboard data for a date | Yes |
+| POST | `/dashboard/get-data` | Fetch PR data from GitHub | Yes |
+| GET | `/dashboard/timeline/:prNumber` | Get PR timeline | Yes |
+| DELETE | `/dashboard/pr/:prNumber` | Delete PR from storage | Yes |
+
+### Raw Data API (Protected)
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/raw-data` | Get raw data files list | Yes |
+| POST | `/raw-data` | Process raw data from Findy Team | Yes |
+
+## Scripts
+
+### Backend
+
+```bash
+# Development
+npm run start:dev
+
+# Production build
+npm run build
+npm run start:prod
+
+# Linting
+npm run lint
+
+# Testing
+npm run test
+npm run test:e2e
+```
+
+### Frontend
+
+```bash
+# Development
+npm run dev
+
+# Production build
+npm run build
+npm run start
+
+# Linting
+npm run lint
+```
+
+## Environment Variables
+
+### Backend (`backend/.env`)
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GITHUB_OWNER` | GitHub username or organization | Yes |
+| `GITHUB_REPO` | Repository name | Yes |
+| `GITHUB_TOKEN` | GitHub Personal Access Token | Yes |
+| `PORT` | API server port (default: 3000) | No |
+| `FRONTEND_URL` | Frontend URL for CORS (default: http://localhost:3001) | No |
+| `API_KEY` | API key for authentication (required for production) | No* |
+
+\* If `API_KEY` is not set, API endpoints are accessible without authentication (development mode only).
+
+### Frontend (`frontend/.env.local`)
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_API_URL` | Backend API URL (default: http://localhost:3000) | Yes |
+| `NEXT_PUBLIC_API_KEY` | API key for backend authentication (must match backend `API_KEY`) | No* |
+
+\* Required if backend `API_KEY` is set.
+
+## Troubleshooting
+
+### CORS Errors
+
+Make sure the `FRONTEND_URL` in backend `.env` matches your frontend URL.
+
+### Puppeteer Issues (Docker)
+
+The Docker images include Chromium for Puppeteer. If you encounter issues:
+
+```bash
+# Rebuild containers
+docker compose build --no-cache
+docker compose up -d
+```
+
+### Port Already in Use
+
+Change ports in:
+- Backend: `PORT` in `.env`
+- Frontend: Update `package.json` dev script or use `PORT=3002 npm run dev`
+- Docker: Update port mappings in `docker-compose.yml`
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT License
