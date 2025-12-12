@@ -16,6 +16,7 @@ export interface PrMetrics {
   updatedAt: string;
   labels?: Array<{ name: string; color?: string }>;
   hasForcePushed?: boolean;
+  isDraft?: boolean;
   baseBranch?: string;
   headBranch?: string;
 }

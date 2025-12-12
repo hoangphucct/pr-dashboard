@@ -9,6 +9,7 @@ interface StatusBadgeProps {
 const statusColorMap: Record<string, 'success' | 'primary' | 'error' | 'default' | 'secondary'> = {
   Merged: 'secondary',
   Open: 'success',
+  'In Progress': 'success',
   Closed: 'error',
   Draft: 'default',
 };

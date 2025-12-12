@@ -6,12 +6,16 @@ import type { GetDataRequest } from '@/types';
 import { toast } from 'sonner';
 
 /**
- * Hook for fetching dashboard data
+ * Hook for fetching dashboard data with pagination
  */
-export function useDashboard(date?: string) {
+export function useDashboard(
+  date?: string,
+  page?: number,
+  limit?: number,
+) {
   return useQuery({
-    queryKey: ['dashboard', date],
-    queryFn: () => dashboardApi.getDashboard(date),
+    queryKey: ['dashboard', date, page, limit],
+    queryFn: () => dashboardApi.getDashboard(date, page, limit),
   });
 }
 

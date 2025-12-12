@@ -44,6 +44,7 @@ export class PrDataHelper {
       updatedAt: pr.updatedAt || new Date().toISOString(),
       labels: pr.labels || [],
       hasForcePushed: pr.hasForcePushed || false,
+      isDraft: pr.isDraft ?? false,
       baseBranch: pr.baseBranch,
       headBranch: pr.headBranch,
     };

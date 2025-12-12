@@ -2,20 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CircularProgress, Box, Alert, Typography, Stack, Paper } from '@mui/material';
+import { Box, Stack } from '@mui/material';
 import { useDashboard } from '@/hooks/use-dashboard';
 import { PrForm } from '@/components/dashboard/pr-form';
 import { DateSelector } from '@/components/dashboard/date-selector';
-import { PrTable } from '@/components/dashboard/pr-table';
-import { SummaryChart } from '@/components/dashboard/summary-chart';
+import { DashboardHeader } from '@/components/dashboard/dashboard-header';
+import { DashboardContent } from '@/components/dashboard/dashboard-content';
 import { WorkflowModal } from '@/components/dashboard/workflow-modal';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ErrorAlert } from '@/components/ui/error-alert';
+import { EmptyState } from '@/components/ui/empty-state';
+import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import type { DashboardPrData } from '@/types';
 
 export default function DashboardPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const dateParam = searchParams.get('date') || undefined;
-  const { data, isLoading, error } = useDashboard(dateParam);
+  const pageParam = searchParams.get('page');
+  const currentPage = pageParam ? Number.parseInt(pageParam, 10) : 1;
+  const validPage = Number.isNaN(currentPage) || currentPage < 1 ? 1 : currentPage;
+  const { data, isLoading, error } = useDashboard(dateParam, validPage, DEFAULT_PAGE_SIZE);
   const [selectedPr, setSelectedPr] = useState<{
     prNumber: number;
     prData: DashboardPrData;
@@ -29,10 +36,17 @@ export default function DashboardPage() {
 
   const handleDateChange = (date: string) => {
     if (date) {
-      router.push(`/dashboard?date=${date}`);
+      router.push(`/dashboard?date=${date}&page=1`);
     } else {
-      router.push('/dashboard');
+      router.push('/dashboard?page=1');
     }
+  };
+
+  const handlePageChange = (_event: React.ChangeEvent<unknown>, page: number) => {
+    const params = new URLSearchParams();
+    if (dateParam) params.append('date', dateParam);
+    params.append('page', String(page));
+    router.push(`/dashboard?${params.toString()}`);
   };
 
   const handleOpenTimeline = (prNumber: number, prData: DashboardPrData) => {
@@ -49,28 +63,11 @@ export default function DashboardPage() {
   }
 
   if (isLoading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-        }}
-      >
-        <CircularProgress size={60} sx={{ color: '#6366f1' }} />
-      </Box>
-    );
+    return <LoadingSpinner />;
   }
 
   if (error) {
-    return (
-      <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
-        <Alert severity="error">
-          <strong>Error:</strong> {error.message}
-        </Alert>
-      </Box>
-    );
+    return <ErrorAlert message={error.message} />;
   }
 
   const today = new Date().toISOString().split('T')[0];
@@ -78,29 +75,11 @@ export default function DashboardPage() {
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', py: 4, px: { xs: 2, md: 4 } }}>
-      {/* Header */}
-      <Box sx={{ mb: 5, textAlign: 'center' }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{
-            fontWeight: 700,
-            color: '#1e293b',
-            mb: 1,
-          }}
-        >
-          PR Cycle-Time Dashboard
-        </Typography>
-        <Typography variant="body1" sx={{ color: '#64748b' }}>
-          Track and analyze your pull request metrics
-        </Typography>
-      </Box>
+      <DashboardHeader />
 
-      {/* Form Section */}
       <Stack spacing={3}>
         <PrForm selectedDate={selectedDate} />
 
-        {/* Date Selector */}
         {data?.availableDates && data.availableDates.length > 0 && (
           <DateSelector
             availableDates={data.availableDates}
@@ -109,36 +88,19 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* Data Section */}
-        {data?.hasData ? (
-          <Stack spacing={3}>
-            <PrTable
-              data={data.data}
-              selectedDate={selectedDate}
-              onOpenTimeline={handleOpenTimeline}
-            />
-            <SummaryChart data={data.data} />
-          </Stack>
+        {data?.hasData && data.pagination ? (
+          <DashboardContent
+            data={data.data}
+            selectedDate={selectedDate}
+            pagination={data.pagination}
+            onOpenTimeline={handleOpenTimeline}
+            onPageChange={handlePageChange}
+          />
         ) : (
-          <Paper
-            elevation={0}
-            sx={{
-              textAlign: 'center',
-              py: 8,
-              px: 4,
-              bgcolor: 'white',
-              borderRadius: 3,
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
-            }}
-          >
-            <Typography variant="body1" sx={{ color: '#64748b' }}>
-              No data available. Please enter PR IDs and click &quot;Get Data&quot; to start.
-            </Typography>
-          </Paper>
+          <EmptyState message='No data available. Please enter PR IDs and click "Get Data" to start.' />
         )}
       </Stack>
 
-      {/* Modal */}
       <WorkflowModal
         isOpen={selectedPr !== null}
         onClose={handleCloseTimeline}

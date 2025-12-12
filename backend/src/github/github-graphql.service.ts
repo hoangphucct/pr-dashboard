@@ -78,7 +78,9 @@ export class GitHubGraphQLService {
       .map((node) => {
         const commit = node.commit;
         const commitDate =
-          commit.committer?.date || commit.committedDate || new Date().toISOString();
+          commit.committer?.date ||
+          commit.committedDate ||
+          new Date().toISOString();
         return {
           sha: commit.oid,
           commit: {

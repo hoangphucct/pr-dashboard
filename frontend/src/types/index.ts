@@ -13,8 +13,10 @@ export interface DashboardPrData {
   approvalToMerge: number;
   createdAt: string;
   updatedAt: string;
+  openDate?: string;
   labels?: PrLabel[];
   hasForcePushed?: boolean;
+  isDraft?: boolean;
   needsTimelineUpdate?: boolean;
   baseBranch?: string;
   headBranch?: string;
@@ -25,11 +27,21 @@ export interface PrLabel {
   color?: string;
 }
 
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 export interface DashboardResponse {
   data: DashboardPrData[];
   selectedDate: string;
   availableDates: string[];
   hasData: boolean;
+  pagination: PaginationInfo;
 }
 
 export interface GetDataRequest {
@@ -95,6 +107,7 @@ export interface RawDataResponse {
   selectedFileData: RawDataFileInfo | null;
   prsData: DashboardPrData[];
   hasData: boolean;
+  pagination: PaginationInfo;
 }
 
 export interface ProcessRawDataRequest {

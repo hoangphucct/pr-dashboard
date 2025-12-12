@@ -67,32 +67,203 @@ export class FindyScraperService {
   }
 
   /**
-   * Get or create browser instance
+   * Check if browser instance is still connected
+   */
+  private isBrowserConnected(): boolean {
+    if (!this.browser) {
+      return false;
+    }
+    try {
+      const process = this.browser.process();
+      return process !== null && process.exitCode === null;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Close browser instance and reset
+   */
+  private async closeBrowserInstance(): Promise<void> {
+    if (this.browser) {
+      try {
+        await this.browser.close();
+      } catch (error) {
+        console.warn('Error closing browser:', error);
+      } finally {
+        this.browser = null;
+      }
+    }
+  }
+
+  /**
+   * Get or create browser instance with health check and retry logic
    */
   private async getBrowser(): Promise<Browser> {
+    if (!this.isBrowserConnected()) {
+      await this.closeBrowserInstance();
+      return await this.launchBrowserWithRetry();
+    }
     if (!this.browser) {
-      const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-      const isHeadless = process.env.PUPPETEER_HEADLESS !== 'false';
-      const slowMo = process.env.PUPPETEER_SLOW_MO
-        ? Number.parseInt(process.env.PUPPETEER_SLOW_MO, 10)
-        : undefined;
-      const devtools = process.env.PUPPETEER_DEVTOOLS === 'true';
-      this.browser = await puppeteer.launch({
-        headless: isHeadless,
-        executablePath: executablePath || undefined,
-        slowMo,
-        devtools: devtools && !isHeadless,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--disable-gpu',
-          '--single-process',
-        ],
-      });
+      throw new Error('Browser instance is null after initialization');
     }
     return this.browser;
+  }
+
+  /**
+   * Launch browser with retry logic to handle transient failures
+   */
+  private async launchBrowserWithRetry(maxRetries = 3): Promise<Browser> {
+    const launchOptions = this.buildBrowserLaunchOptions();
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        this.logBrowserLaunchAttempt(attempt, maxRetries);
+        this.browser = await puppeteer.launch(launchOptions);
+        await this.waitForBrowserStability();
+        await this.validateBrowserConnection();
+        this.setupBrowserDisconnectListener();
+        console.log('Browser launched successfully');
+        return this.browser;
+      } catch (error) {
+        lastError = await this.handleBrowserLaunchError(error, attempt, maxRetries);
+      }
+    }
+    throw new Error(
+      `Failed to launch browser after ${maxRetries} attempts: ${
+        lastError?.message || 'Unknown error'
+      }`,
+    );
+  }
+
+  /**
+   * Build browser launch options from environment variables
+   */
+  private buildBrowserLaunchOptions(): Parameters<typeof puppeteer.launch>[0] {
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    const isHeadless = process.env.PUPPETEER_HEADLESS !== 'false';
+    const slowMo = process.env.PUPPETEER_SLOW_MO
+      ? Number.parseInt(process.env.PUPPETEER_SLOW_MO, 10)
+      : undefined;
+    const devtools = process.env.PUPPETEER_DEVTOOLS === 'true';
+    return {
+      headless: isHeadless,
+      executablePath: executablePath || undefined,
+      slowMo,
+      devtools: devtools && !isHeadless,
+      args: this.getBrowserArgs(),
+      timeout: 30000,
+    };
+  }
+
+  /**
+   * Get browser command line arguments
+   */
+  private getBrowserArgs(): string[] {
+    return [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--disable-gpu',
+      '--disable-software-rasterizer',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
+      '--disable-features=TranslateUI',
+      '--disable-ipc-flooding-protection',
+      '--disable-extensions',
+      '--disable-plugins',
+      '--disable-default-apps',
+      '--disable-sync',
+      '--metrics-recording-only',
+      '--mute-audio',
+      '--no-first-run',
+      '--safebrowsing-disable-auto-update',
+      '--disable-web-security',
+      '--disable-features=VizDisplayCompositor',
+      '--ignore-certificate-errors',
+    ];
+  }
+
+  /**
+   * Log browser launch attempt
+   */
+  private logBrowserLaunchAttempt(attempt: number, maxRetries: number): void {
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    const isHeadless = process.env.PUPPETEER_HEADLESS !== 'false';
+    console.log(
+      `Attempting to launch browser (attempt ${attempt}/${maxRetries})...`,
+    );
+    console.log(`Executable path: ${executablePath || 'default'}`);
+    console.log(`Headless: ${isHeadless}`);
+  }
+
+  /**
+   * Wait for browser to stabilize after launch
+   */
+  private async waitForBrowserStability(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  /**
+   * Validate browser connection and test with a page
+   */
+  private async validateBrowserConnection(): Promise<void> {
+    if (!this.isBrowserConnected()) {
+      throw new Error('Browser launched but connection lost immediately');
+    }
+    try {
+      const testPage = await this.browser!.newPage();
+      await testPage.close();
+    } catch (testError) {
+      throw new Error(
+        `Browser test failed: ${
+          testError instanceof Error ? testError.message : 'Unknown error'
+        }`,
+      );
+    }
+  }
+
+  /**
+   * Setup listener for browser disconnect event
+   */
+  private setupBrowserDisconnectListener(): void {
+    this.browser!.on('disconnected', () => {
+      console.warn('Browser disconnected, resetting instance');
+      this.browser = null;
+    });
+  }
+
+  /**
+   * Handle browser launch error and prepare for retry
+   */
+  private async handleBrowserLaunchError(
+    error: unknown,
+    attempt: number,
+    maxRetries: number,
+  ): Promise<Error> {
+    const lastError = error instanceof Error ? error : new Error(String(error));
+    console.warn(
+      `Browser launch attempt ${attempt} failed: ${lastError.message}`,
+    );
+    if (lastError.stack) {
+      console.warn(`Stack trace: ${lastError.stack}`);
+    }
+    await this.closeBrowserInstance();
+    if (attempt < maxRetries) {
+      await this.waitBeforeRetry(attempt);
+    }
+    return lastError;
+  }
+
+  /**
+   * Wait before retry with exponential backoff
+   */
+  private async waitBeforeRetry(attempt: number): Promise<void> {
+    const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+    console.log(`Retrying in ${delayMs}ms...`);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 
   /**
@@ -136,76 +307,6 @@ export class FindyScraperService {
     } catch {
       return false;
     }
-  }
-
-  /**
-   * Wait for network request to complete
-   */
-  private async waitForGraphQLRequest(
-    page: Page,
-    urlPattern: string,
-    timeout = 30000,
-  ): Promise<unknown> {
-    return new Promise((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        reject(new Error('Timeout waiting for GraphQL request'));
-      }, timeout);
-
-      page.on('response', (response) => {
-        const url = response.url();
-        if (url.includes(urlPattern)) {
-          clearTimeout(timeoutId);
-          void (async () => {
-            try {
-              const data = (await response.json()) as unknown;
-              resolve(data);
-            } catch (error) {
-              reject(
-                new Error(
-                  `Failed to parse GraphQL response: ${
-                    error instanceof Error ? error.message : 'Unknown error'
-                  }`,
-                ),
-              );
-            }
-          })();
-        }
-      });
-    });
-  }
-
-  /**
-   * Wait for promise with timeout using async/await
-   */
-  private async waitWithTimeout<T>(
-    promise: Promise<T>,
-    timeoutMs: number,
-    errorMessage: string,
-  ): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        if (!isResolved) {
-          isResolved = true;
-          reject(new Error(errorMessage));
-        }
-      }, timeoutMs);
-      let isResolved = false;
-      promise
-        .then((result) => {
-          if (!isResolved) {
-            isResolved = true;
-            clearTimeout(timeoutId);
-            resolve(result);
-          }
-        })
-        .catch((error) => {
-          if (!isResolved) {
-            isResolved = true;
-            clearTimeout(timeoutId);
-            reject(error instanceof Error ? error : new Error(String(error)));
-          }
-        });
-    });
   }
 
   /**
@@ -686,31 +787,15 @@ export class FindyScraperService {
           'Invalid URL format. Expected:\n• https://findy-team.io/team/analytics/cycletime?monitoring_id=<number>&range=<string>\n• https://findy-team.io/team/analytics/cycletime?monitoring_id=<number>&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD',
       };
     }
-    const browser = await this.getBrowser();
-    const page = await browser.newPage();
+    let page: Page | null = null;
     try {
-      await page.setViewport({ width: 1920, height: 1080 });
-      await page.goto(url, {
-        waitUntil: 'networkidle2',
-        timeout: 30000,
-      });
-      const isLoggedIn = await this.checkLoginStatus(page);
-      if (!isLoggedIn) {
-        const loginResult = await this.handleLogin(page);
-        if (loginResult) {
-          return loginResult;
-        }
+      page = await this.initializePage();
+      await this.navigateToUrl(page, url);
+      const loginResult = await this.ensureLoggedIn(page);
+      if (loginResult) {
+        return loginResult;
       }
-      await this.humanDelay(100, 200);
-      console.log('Looking for Monthly button...');
-      const monthlyButton = await this.findMonthlyButton(page);
-      if (monthlyButton) {
-        await this.clickMonthlyButton(page, monthlyButton);
-      } else {
-        console.warn(
-          'Monthly button not found - might already be selected or page structure changed',
-        );
-      }
+      await this.selectMonthlyView(page);
       const chartError = await this.waitForChart(page);
       if (chartError) {
         return chartError;
@@ -719,33 +804,9 @@ export class FindyScraperService {
       if (chartInteractionError) {
         return chartInteractionError;
       }
-      try {
-        console.log('Waiting for table to appear...');
-        const firstPageResult = await this.scrapeTableFromPage(page);
-        console.log('Got table HTML from first page');
-        console.log('Checking for pagination...');
-        const paginationInfo = await this.checkPagination(page);
-        console.log(
-          `Pagination info: hasPagination=${paginationInfo.hasPagination}, totalPages=${paginationInfo.totalPages}`,
-        );
-        if (!paginationInfo.hasPagination || paginationInfo.totalPages <= 1) {
-          return {
-            success: true,
-            data: { source: 'table', html: firstPageResult.tableHtml },
-            prNumbers: firstPageResult.prNumbers,
-          };
-        }
-        return await this.scrapeAllPages(page, firstPageResult, paginationInfo);
-      } catch (error) {
-        console.error('Error finding table:', error);
-        return {
-          success: false,
-          error: `Could not find table after clicking chart: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`,
-        };
-      }
+      return await this.scrapeTableData(page);
     } catch (error) {
+      await this.handleBrowserConnectionError(error);
       return {
         success: false,
         error: `Scraping failed: ${
@@ -753,41 +814,204 @@ export class FindyScraperService {
         }`,
       };
     } finally {
-      await page.close();
+      await this.closePageSafely(page);
     }
   }
 
   /**
-   * Extract PR numbers from GraphQL data
+   * Initialize browser page with viewport settings
+   * Falls back to creating a fresh browser if singleton fails
    */
-  private extractPrNumbers(data: unknown): number[] {
-    if (!data || typeof data !== 'object') {
-      return [];
-    }
-
-    const dataObj = data as Record<string, unknown>;
-    const prNumbers: number[] = [];
-
-    // Recursively search for PR numbers in the data structure
-    const searchForPrNumbers = (obj: unknown): void => {
-      if (typeof obj === 'number' && obj > 0 && obj < 1000000) {
-        // Likely a PR number (reasonable range)
-        if (!prNumbers.includes(obj)) {
-          prNumbers.push(obj);
-        }
-      } else if (Array.isArray(obj)) {
-        obj.forEach((item) => searchForPrNumbers(item));
-      } else if (obj !== null && typeof obj === 'object') {
-        Object.values(obj).forEach((value) => searchForPrNumbers(value));
+  private async initializePage(): Promise<Page> {
+    try {
+      const browser = await this.getBrowser();
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1920, height: 1080 });
+      return page;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      console.warn(
+        `Failed to get singleton browser (${errorMessage}), attempting fresh browser launch...`,
+      );
+      try {
+        // Fallback: launch a fresh browser just for this request
+        const browser = await this.launchFreshBrowser();
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1920, height: 1080 });
+        // Store reference to close later
+        (page as Page & { _tempBrowser?: Browser })._tempBrowser = browser;
+        return page;
+      } catch (fallbackError) {
+        const fallbackMessage =
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : 'Unknown error';
+        throw new Error(
+          `Failed to initialize browser (singleton: ${errorMessage}, fallback: ${fallbackMessage})`,
+        );
       }
+    }
+  }
+
+  /**
+   * Launch a fresh browser instance (not stored as singleton)
+   */
+  private async launchFreshBrowser(): Promise<Browser> {
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    const isHeadless = process.env.PUPPETEER_HEADLESS !== 'false';
+    const launchOptions = {
+      headless: isHeadless,
+      executablePath: executablePath || undefined,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--disable-software-rasterizer',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection',
+        '--disable-extensions',
+        '--disable-plugins',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--metrics-recording-only',
+        '--mute-audio',
+        '--no-first-run',
+        '--safebrowsing-disable-auto-update',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--ignore-certificate-errors',
+      ],
+      timeout: 30000,
     };
+    try {
+      return await puppeteer.launch(launchOptions);
+    } catch (error) {
+      throw new Error(
+        `Failed to launch fresh browser: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+      );
+    }
+  }
 
-    searchForPrNumbers(dataObj);
+  /**
+   * Navigate to URL
+   */
+  private async navigateToUrl(page: Page, url: string): Promise<void> {
+    await page.goto(url, {
+      waitUntil: 'networkidle2',
+      timeout: 30000,
+    });
+  }
 
-    // Filter to reasonable PR numbers (typically 4-6 digits)
-    return prNumbers
-      .filter((num) => num >= 1000 && num < 100000)
-      .sort((a, b) => a - b);
+  /**
+   * Ensure user is logged in, return error result if login fails
+   */
+  private async ensureLoggedIn(page: Page): Promise<FindyScrapeResult | null> {
+    const isLoggedIn = await this.checkLoginStatus(page);
+    if (!isLoggedIn) {
+      return await this.handleLogin(page);
+    }
+    return null;
+  }
+
+  /**
+   * Select monthly view by clicking Monthly button
+   */
+  private async selectMonthlyView(page: Page): Promise<void> {
+    await this.humanDelay(100, 200);
+    console.log('Looking for Monthly button...');
+    const monthlyButton = await this.findMonthlyButton(page);
+    if (monthlyButton) {
+      await this.clickMonthlyButton(page, monthlyButton);
+    } else {
+      console.warn(
+        'Monthly button not found - might already be selected or page structure changed',
+      );
+    }
+  }
+
+  /**
+   * Scrape table data from page, handling pagination if needed
+   */
+  private async scrapeTableData(page: Page): Promise<FindyScrapeResult> {
+    try {
+      console.log('Waiting for table to appear...');
+      const firstPageResult = await this.scrapeTableFromPage(page);
+      console.log('Got table HTML from first page');
+      console.log('Checking for pagination...');
+      const paginationInfo = await this.checkPagination(page);
+      console.log(
+        `Pagination info: hasPagination=${paginationInfo.hasPagination}, totalPages=${paginationInfo.totalPages}`,
+      );
+      if (!paginationInfo.hasPagination || paginationInfo.totalPages <= 1) {
+        return {
+          success: true,
+          data: { source: 'table', html: firstPageResult.tableHtml },
+          prNumbers: firstPageResult.prNumbers,
+        };
+      }
+      return await this.scrapeAllPages(page, firstPageResult, paginationInfo);
+    } catch (error) {
+      console.error('Error finding table:', error);
+      return {
+        success: false,
+        error: `Could not find table after clicking chart: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+      };
+    }
+  }
+
+  /**
+   * Handle browser connection errors by resetting browser instance
+   */
+  private async handleBrowserConnectionError(error: unknown): Promise<void> {
+    if (
+      error instanceof Error &&
+      (error.message.includes('Target closed') ||
+        error.message.includes('Protocol error') ||
+        error.message.includes('Connection closed'))
+    ) {
+      console.warn('Browser connection lost, resetting browser instance');
+      await this.closeBrowserInstance();
+    }
+  }
+
+  /**
+   * Close page safely, handling errors
+   * Also closes temporary browser if page was created with fresh browser
+   */
+  private async closePageSafely(page: Page | null): Promise<void> {
+    if (!page) {
+      return;
+    }
+    try {
+      // Check if page has a temporary browser attached
+      const tempBrowser = (page as Page & { _tempBrowser?: Browser })
+        ._tempBrowser;
+      if (tempBrowser) {
+        // Close the temporary browser (this will also close all pages)
+        try {
+          await tempBrowser.close();
+        } catch (error) {
+          console.warn('Error closing temporary browser:', error);
+        }
+        return;
+      }
+      // Otherwise just close the page
+      if (!page.isClosed()) {
+        await page.close();
+      }
+    } catch (error) {
+      console.warn('Error closing page:', error);
+    }
   }
 
   /**
@@ -847,27 +1071,57 @@ export class FindyScraperService {
 
   /**
    * Extract PR numbers from table HTML
+   * Priority:
+   * 1. Find first td with class "css-18a3pw2 e38b3j914"
+   * 2. If not found, find first td containing an <a> tag with PR link in href
+   * 3. Extract PR number from the link
    */
   private extractPrNumbersFromTable(tableHtml: string): number[] {
     const prNumbers: number[] = [];
+    const prLinkPattern = /\/pull\/(\d+)/i;
+    const rowsPattern = /<tr[^>]*>.*?<\/tr>/gis;
+    let rowMatch: RegExpExecArray | null;
 
-    // Try to extract from table cells
-    const cellRegex = /<t[dh][^>]*>([^<]*(?:\d{4,6})[^<]*)<\/t[dh]>/gi;
-    let match: RegExpExecArray | null;
-    while ((match = cellRegex.exec(tableHtml)) !== null) {
-      const cellText: string = match[1];
-      const numbers: string[] | null = cellText.match(/\b(\d{4,6})\b/g);
-      if (numbers) {
-        numbers.forEach((num: string) => {
-          const prNum = Number.parseInt(num, 10);
-          if (prNum >= 1000 && prNum < 100000 && !prNumbers.includes(prNum)) {
-            prNumbers.push(prNum);
+    while ((rowMatch = rowsPattern.exec(tableHtml)) !== null) {
+      const rowHtml = rowMatch[0];
+      let prNumber: number | null = null;
+
+      // Try to find td with class "css-18a3pw2 e38b3j914" (class order may vary)
+      const specificClassPattern =
+        /<td[^>]*class="[^"]*(?:css-18a3pw2[^"]*e38b3j914|e38b3j914[^"]*css-18a3pw2)[^"]*"[^>]*>(.*?)<\/td>/is;
+      const specificClassMatch = rowHtml.match(specificClassPattern);
+      if (specificClassMatch) {
+        const cellContent = specificClassMatch[1];
+        const linkMatch = cellContent.match(/<a[^>]*href="([^"]*)"[^>]*>/i);
+        if (linkMatch && linkMatch[1]) {
+          const prMatch = linkMatch[1].match(prLinkPattern);
+          if (prMatch && prMatch[1]) {
+            prNumber = Number.parseInt(prMatch[1], 10);
           }
-        });
+        }
+      } else {
+        // Fallback: find first td containing an <a> tag with PR link
+        const tdPattern = /<td[^>]*>(.*?)<\/td>/gis;
+        let tdMatch: RegExpExecArray | null;
+        while ((tdMatch = tdPattern.exec(rowHtml)) !== null) {
+          const tdContent = tdMatch[1];
+          const linkMatch = tdContent.match(/<a[^>]*href="([^"]*)"[^>]*>/i);
+          if (linkMatch && linkMatch[1]) {
+            const prMatch = linkMatch[1].match(prLinkPattern);
+            if (prMatch && prMatch[1]) {
+              prNumber = Number.parseInt(prMatch[1], 10);
+              break;
+            }
+          }
+        }
+      }
+
+      if (prNumber && !Number.isNaN(prNumber) && !prNumbers.includes(prNumber)) {
+        prNumbers.push(prNumber);
       }
     }
 
-    // Fallback to general text extraction
+    // Fallback to general text extraction if no PRs found
     if (prNumbers.length === 0) {
       return this.extractPrNumbersFromText(tableHtml);
     }
@@ -879,9 +1133,6 @@ export class FindyScraperService {
    * Close browser instance
    */
   async closeBrowser(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
-    }
+    await this.closeBrowserInstance();
   }
 }

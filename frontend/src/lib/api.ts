@@ -24,7 +24,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
   // Add API key if available
   if (API_KEY) {
-    headers['X-API-Key'] = API_KEY;
+    (headers as Record<string, string>)['X-API-Key'] = API_KEY;
   }
 
   const response = await fetch(url, {
@@ -45,11 +45,21 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
  */
 export const dashboardApi = {
   /**
-   * Get dashboard data for a specific date
+   * Get dashboard data for a specific date with pagination
    */
-  getDashboard: (date?: string): Promise<DashboardResponse> => {
-    const params = date ? `?date=${encodeURIComponent(date)}` : '';
-    return fetchApi<DashboardResponse>(`/dashboard${params}`);
+  getDashboard: (
+    date?: string,
+    page?: number,
+    limit?: number,
+  ): Promise<DashboardResponse> => {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    if (page) params.append('page', String(page));
+    if (limit) params.append('limit', String(limit));
+    const queryString = params.toString();
+    return fetchApi<DashboardResponse>(
+      `/dashboard${queryString ? `?${queryString}` : ''}`,
+    );
   },
 
   /**
@@ -85,11 +95,21 @@ export const dashboardApi = {
  */
 export const rawDataApi = {
   /**
-   * Get raw data files list and optionally load a selected file's data
+   * Get raw data files list and optionally load a selected file's data with pagination
    */
-  getRawData: (selectedFile?: string): Promise<RawDataResponse> => {
-    const params = selectedFile ? `?selectedFile=${encodeURIComponent(selectedFile)}` : '';
-    return fetchApi<RawDataResponse>(`/raw-data${params}`);
+  getRawData: (
+    selectedFile?: string,
+    page?: number,
+    limit?: number,
+  ): Promise<RawDataResponse> => {
+    const params = new URLSearchParams();
+    if (selectedFile) params.append('selectedFile', selectedFile);
+    if (page) params.append('page', String(page));
+    if (limit) params.append('limit', String(limit));
+    const queryString = params.toString();
+    return fetchApi<RawDataResponse>(
+      `/raw-data${queryString ? `?${queryString}` : ''}`,
+    );
   },
 
   /**

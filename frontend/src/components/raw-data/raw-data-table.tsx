@@ -17,7 +17,7 @@ import {
 import { StatusBadge } from '@/components/ui/status-badge';
 import { BranchInfo } from '@/components/ui/branch-info';
 import { PrLabels } from '@/components/ui/pr-label';
-import { calculateOpenToMerge, calculateTotalTime } from '@/lib/utils';
+import { calculateOpenToMerge, calculateTotalTime, formatDate } from '@/lib/utils';
 import type { DashboardPrData } from '@/types';
 
 interface RawDataTableProps {
@@ -80,8 +80,8 @@ export function RawDataTable({ data }: RawDataTableProps) {
             >
               <TableCell>PR Number</TableCell>
               <TableCell sx={{ minWidth: 250 }}>Title</TableCell>
-              <TableCell>Author</TableCell>
               <TableCell>Status</TableCell>
+              <TableCell>Open Date</TableCell>
               <TableCell align="right">Commit to Open</TableCell>
               <TableCell align="right">Open to Review</TableCell>
               <TableCell align="right">Review to Approval</TableCell>
@@ -128,9 +128,11 @@ export function RawDataTable({ data }: RawDataTableProps) {
                     <PrLabels labels={pr.labels} />
                   </Stack>
                 </TableCell>
-                <TableCell sx={{ color: '#475569' }}>{pr.author}</TableCell>
                 <TableCell>
                   <StatusBadge status={pr.status} />
+                </TableCell>
+                <TableCell sx={{ color: '#475569' }}>
+                  {pr.openDate ? formatDate(pr.openDate) : '-'}
                 </TableCell>
                 <TableCell align="right" sx={{ fontFamily: 'monospace', color: '#475569' }}>
                   {formatRawValue(pr.commitToOpen)}

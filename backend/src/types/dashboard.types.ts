@@ -19,8 +19,10 @@ export interface DashboardPrData {
   approvalToMerge: number;
   createdAt: string;
   updatedAt: string;
+  openDate?: string;
   labels?: Array<{ name: string; color?: string }>;
   hasForcePushed?: boolean;
+  isDraft?: boolean;
   needsTimelineUpdate?: boolean;
   baseBranch?: string;
   headBranch?: string;

@@ -23,6 +23,10 @@ import type { GetDataDto } from '@shared/dashboard.types';
 import type { TimelineResult } from '@shared/timeline.types';
 import type { GitHubPullRequestDetail } from '@shared/github.types';
 import { ApiKeyGuard } from '@auth/api-key.guard';
+import {
+  DEFAULT_PAGE_LIMIT,
+  MAX_PAGE_LIMIT,
+} from '../shared/pagination.constants';
 
 @Controller('dashboard')
 @UseGuards(ApiKeyGuard)
@@ -38,10 +42,14 @@ export class DashboardController {
   ) {}
 
   /**
-   * Get dashboard data for a specific date
+   * Get dashboard data for a specific date with pagination
    */
   @Get()
-  getDashboard(@Query('date') date?: string) {
+  getDashboard(
+    @Query('date') date?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
     const selectedDate = date || new Date().toISOString().split('T')[0];
     const data = this.storageService.loadDataByDate(selectedDate);
     const availableDates = this.storageService.listAvailableDates();
@@ -52,11 +60,32 @@ export class DashboardController {
       ...pr,
       hasForcePushed: pr.hasForcePushed === true,
     }));
+    // Pagination
+    const pageNum = page ? Number.parseInt(page, 10) : 1;
+    const limitNum = limit ? Number.parseInt(limit, 10) : DEFAULT_PAGE_LIMIT;
+    const validPage = Number.isNaN(pageNum) || pageNum < 1 ? 1 : pageNum;
+    const validLimit =
+      Number.isNaN(limitNum) || limitNum < 1 || limitNum > MAX_PAGE_LIMIT
+        ? DEFAULT_PAGE_LIMIT
+        : limitNum;
+    const totalPages = Math.ceil(prsWithForcePushCheck.length / validLimit);
+    const normalizedPage = totalPages > 0 && validPage > totalPages ? totalPages : validPage;
+    const startIndex = (normalizedPage - 1) * validLimit;
+    const endIndex = startIndex + validLimit;
+    const paginatedData = prsWithForcePushCheck.slice(startIndex, endIndex);
     return {
-      data: prsWithForcePushCheck,
+      data: paginatedData,
       selectedDate,
       availableDates,
       hasData,
+      pagination: {
+        page: normalizedPage,
+        limit: validLimit,
+        total: prsWithForcePushCheck.length,
+        totalPages,
+        hasNextPage: normalizedPage < totalPages,
+        hasPreviousPage: normalizedPage > 1,
+      },
     };
   }
 
@@ -249,7 +278,10 @@ export class DashboardController {
             const events =
               (prDetails as GitHubPullRequestDetail & { _events?: unknown[] })
                 ._events || [];
-            const timeline = this.timelineService.buildTimeline(prDetails, events);
+            const timeline = this.timelineService.buildTimeline(
+              prDetails,
+              events,
+            );
 
             const status = this.prService.getPrStatus(prDetails);
             const timelineItems = timeline.timeline || [];

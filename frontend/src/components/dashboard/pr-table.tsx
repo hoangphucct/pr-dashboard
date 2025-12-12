@@ -139,6 +139,16 @@ export function PrTable({ data, selectedDate, onOpenTimeline }: PrTableProps) {
                       </Stack>
                       <BranchInfo baseBranch={pr.baseBranch} headBranch={pr.headBranch} />
                       <PrLabels labels={pr.labels} />
+                      {pr.isDraft === false && (
+                        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                          <Chip
+                            label="Not Draft"
+                            color="error"
+                            size="small"
+                            className="ml-2 w-auto"
+                          />
+                          </Stack>
+                        )}
                     </Stack>
                   </TableCell>
                   <TableCell sx={{ color: '#475569' }}>{pr.author}</TableCell>
