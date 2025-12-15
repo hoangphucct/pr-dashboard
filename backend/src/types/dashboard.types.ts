@@ -23,6 +23,8 @@ export interface DashboardPrData {
   labels?: Array<{ name: string; color?: string }>;
   hasForcePushed?: boolean;
   isDraft?: boolean;
+  /** True if PR was created as Draft (has ready_for_review event in history) */
+  wasCreatedAsDraft?: boolean;
   needsTimelineUpdate?: boolean;
   baseBranch?: string;
   headBranch?: string;

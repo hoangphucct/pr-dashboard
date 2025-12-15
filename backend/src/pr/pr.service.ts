@@ -47,7 +47,17 @@ export class PrService {
     const hasForcePushed = allEvents.some(
       (event) => event.event === 'head_ref_force_pushed',
     );
-    const baseMetrics = this.buildBaseMetrics(prDetails, prNumber, status, hasForcePushed);
+    // Check if PR was created as Draft (has ready_for_review event means it was Draft before)
+    const wasCreatedAsDraft = allEvents.some(
+      (event) => event.event === 'ready_for_review',
+    );
+    const baseMetrics = this.buildBaseMetrics(
+      prDetails,
+      prNumber,
+      status,
+      hasForcePushed,
+      wasCreatedAsDraft,
+    );
     if (status === 'Draft') {
       return {
         ...baseMetrics,
@@ -74,6 +84,7 @@ export class PrService {
     prNumber: number,
     status: string,
     hasForcePushed: boolean,
+    wasCreatedAsDraft: boolean,
   ): PrMetrics {
     return {
       prNumber,
@@ -93,6 +104,7 @@ export class PrService {
       })),
       hasForcePushed,
       isDraft: prDetails.draft || false,
+      wasCreatedAsDraft,
       baseBranch: prDetails.base?.ref,
       headBranch: prDetails.head?.ref,
     };

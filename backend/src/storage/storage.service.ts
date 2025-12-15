@@ -5,6 +5,7 @@ import {
   existsSync,
   readdirSync,
   mkdirSync,
+  unlinkSync,
 } from 'node:fs';
 import { join } from 'node:path';
 import type { PrMetrics, DailyData } from '@shared/storage.types';
@@ -189,5 +190,26 @@ export class StorageService {
    */
   deletePrFromToday(prNumber: number): boolean {
     return this.deletePrFromDate(prNumber);
+  }
+
+  /**
+   * Delete all data for a specific date
+   * @param date - Date in YYYY-MM-DD format
+   * @returns true if deleted, false if file not found
+   */
+  deleteDataByDate(date: string): boolean {
+    const filePath = this.getFilePath(date);
+
+    if (!existsSync(filePath)) {
+      return false;
+    }
+
+    try {
+      unlinkSync(filePath);
+      return true;
+    } catch (error) {
+      console.error('Error deleting data file:', filePath, error);
+      return false;
+    }
   }
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Box, Stack } from '@mui/material';
-import { useDashboard } from '@/hooks/use-dashboard';
+import { useDashboard, useDeleteDataByDate } from '@/hooks/use-dashboard';
 import { PrForm } from '@/components/dashboard/pr-form';
 import { DateSelector } from '@/components/dashboard/date-selector';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const currentPage = pageParam ? Number.parseInt(pageParam, 10) : 1;
   const validPage = Number.isNaN(currentPage) || currentPage < 1 ? 1 : currentPage;
   const { data, isLoading, error } = useDashboard(dateParam, validPage, DEFAULT_PAGE_SIZE);
+  const deleteDataByDate = useDeleteDataByDate();
   const [selectedPr, setSelectedPr] = useState<{
     prNumber: number;
     prData: DashboardPrData;
@@ -57,6 +58,12 @@ export default function DashboardPage() {
     setSelectedPr(null);
   };
 
+  const handleDeleteDate = async (date: string) => {
+    await deleteDataByDate.mutateAsync(date);
+    // Navigate to dashboard without date param after deletion
+    router.push('/dashboard?page=1');
+  };
+
   // Show nothing during SSR to prevent hydration mismatch
   if (!mounted) {
     return null;
@@ -85,6 +92,8 @@ export default function DashboardPage() {
             availableDates={data.availableDates}
             selectedDate={selectedDate}
             onDateChange={handleDateChange}
+            onDeleteDate={handleDeleteDate}
+            isDeleting={deleteDataByDate.isPending}
           />
         )}
 

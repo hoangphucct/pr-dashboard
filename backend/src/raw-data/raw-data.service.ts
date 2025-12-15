@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync, statSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
 export interface RawDataFile {
@@ -130,6 +130,35 @@ export class RawDataService {
     } catch (error) {
       console.error(`Error getting raw data file ${fileName}:`, error);
       return null;
+    }
+  }
+
+  /**
+   * Delete a raw data file
+   * @param fileName - Name of the file to delete
+   * @returns true if deleted, false if file not found
+   */
+  deleteRawDataFile(fileName: string): boolean {
+    if (!existsSync(this.rawDataDir)) {
+      return false;
+    }
+
+    // Validate file name format to prevent directory traversal
+    if (!fileName.startsWith('raw-data-') || !fileName.endsWith('.json')) {
+      return false;
+    }
+
+    const filePath = join(this.rawDataDir, fileName);
+    if (!existsSync(filePath)) {
+      return false;
+    }
+
+    try {
+      unlinkSync(filePath);
+      return true;
+    } catch (error) {
+      console.error(`Error deleting raw data file ${fileName}:`, error);
+      return false;
     }
   }
 }

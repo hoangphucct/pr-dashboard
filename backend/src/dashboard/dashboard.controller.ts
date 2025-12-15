@@ -357,6 +357,35 @@ export class DashboardController {
     };
   }
 
+  /**
+   * Delete all data for a specific date
+   */
+  @Delete('date/:date')
+  deleteDataByDate(@Param('date') date: string) {
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date)) {
+      throw new HttpException(
+        'Invalid date format. Use YYYY-MM-DD',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const deleted = this.storageService.deleteDataByDate(date);
+    if (!deleted) {
+      throw new HttpException(
+        `No data found for date ${date}`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return {
+      success: true,
+      message: `All data for ${date} deleted successfully`,
+      date,
+    };
+  }
+
   @Get('scrape')
   async scrapeUrl(@Query('url') url?: string, @Query('type') type?: string) {
     if (!url) {

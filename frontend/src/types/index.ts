@@ -17,6 +17,8 @@ export interface DashboardPrData {
   labels?: PrLabel[];
   hasForcePushed?: boolean;
   isDraft?: boolean;
+  /** True if PR was created as Draft (has ready_for_review event in history) */
+  wasCreatedAsDraft?: boolean;
   needsTimelineUpdate?: boolean;
   baseBranch?: string;
   headBranch?: string;
@@ -112,6 +114,7 @@ export interface RawDataResponse {
 
 export interface ProcessRawDataRequest {
   findyUrl: string;
+  saveToDashboard?: boolean;
 }
 
 export interface ProcessRawDataResponse {
@@ -120,6 +123,9 @@ export interface ProcessRawDataResponse {
   fileName: string;
   prCount: number;
   prNumbers: number[];
+  dashboardSaved?: boolean;
+  dashboardDate?: string;
+  dashboardPrCount?: number;
 }
 
 /**

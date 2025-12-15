@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Box, Stack } from '@mui/material';
-import { useRawData } from '@/hooks/use-raw-data';
+import { useRawData, useDeleteRawDataFile } from '@/hooks/use-raw-data';
 import { RawDataForm } from '@/components/raw-data/raw-data-form';
 import { FileSelector } from '@/components/raw-data/file-selector';
 import { RawDataHeader } from '@/components/raw-data/raw-data-header';
@@ -23,6 +23,7 @@ export default function RawDataPage() {
   const currentPage = pageParam ? Number.parseInt(pageParam, 10) : 1;
   const validPage = Number.isNaN(currentPage) || currentPage < 1 ? 1 : currentPage;
   const { data, isLoading, error } = useRawData(selectedFile, validPage, DEFAULT_PAGE_SIZE);
+  const deleteRawDataFile = useDeleteRawDataFile();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -35,6 +36,12 @@ export default function RawDataPage() {
     } else {
       router.push('/raw-data?page=1');
     }
+  };
+
+  const handleDeleteFile = async (fileName: string) => {
+    await deleteRawDataFile.mutateAsync(fileName);
+    // Navigate to raw-data without selectedFile after deletion
+    router.push('/raw-data?page=1');
   };
 
   const handlePageChange = (_event: React.ChangeEvent<unknown>, page: number) => {
@@ -69,6 +76,8 @@ export default function RawDataPage() {
             files={data.rawDataFiles}
             selectedFile={selectedFile}
             onFileChange={handleFileChange}
+            onDeleteFile={handleDeleteFile}
+            isDeleting={deleteRawDataFile.isPending}
           />
         )}
 

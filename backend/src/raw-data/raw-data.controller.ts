@@ -3,6 +3,8 @@ import {
   Post,
   Body,
   Get,
+  Delete,
+  Param,
   Query,
   HttpException,
   HttpStatus,
@@ -10,6 +12,8 @@ import {
 } from '@nestjs/common';
 import { FindyScraperService } from '@scraper/findy-scraper.service';
 import { RawDataService, RawDataContent } from '@raw-data/raw-data.service';
+import { PrService } from '@pr/pr.service';
+import { StorageService } from '@storage/storage.service';
 import { PrDataHelper } from '@dashboard/pr-data.helper';
 import { HtmlParserHelper } from '@raw-data/html-parser.helper';
 import { ApiKeyGuard } from '@auth/api-key.guard';
@@ -32,6 +36,8 @@ export class RawDataController {
   constructor(
     private readonly findyScraperService: FindyScraperService,
     private readonly rawDataService: RawDataService,
+    private readonly prService: PrService,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -273,8 +279,10 @@ export class RawDataController {
    * Process raw data from Findy Team URL
    */
   @Post()
-  async processRawData(@Body() body: { findyUrl?: string }) {
+  async processRawData(@Body() body: { findyUrl?: string; saveToDashboard?: boolean }) {
     const findyUrl = body.findyUrl?.trim();
+    const saveToDashboard = body.saveToDashboard !== false; // Default to true
+
     if (!findyUrl) {
       throw new HttpException('URL is required', HttpStatus.BAD_REQUEST);
     }
@@ -313,12 +321,40 @@ export class RawDataController {
       };
       writeFileSync(filePath, JSON.stringify(rawDataToSave, null, 2), 'utf-8');
       const prNumbers = scrapeResult.prNumbers || [];
+
+      // Auto-fetch PR metrics and save to dashboard data
+      let dashboardSaved = false;
+      let dashboardDate = '';
+      let dashboardPrCount = 0;
+
+      if (saveToDashboard && prNumbers.length > 0) {
+        try {
+          dashboardDate = new Date().toISOString().split('T')[0];
+          console.log(`[Raw Data] Fetching metrics for ${prNumbers.length} PRs...`);
+          
+          const metrics = await this.prService.calculateMetrics(prNumbers);
+          this.storageService.saveDataByDate(metrics, dashboardDate, true);
+          
+          dashboardSaved = true;
+          dashboardPrCount = metrics.length;
+          console.log(`[Raw Data] Saved ${dashboardPrCount} PRs to dashboard data for ${dashboardDate}`);
+        } catch (dashboardError) {
+          console.error('[Raw Data] Error saving to dashboard:', dashboardError);
+          // Don't fail the whole request, just log the error
+        }
+      }
+
       return {
         success: true,
-        message: 'Raw data saved successfully',
+        message: dashboardSaved
+          ? `Raw data saved and dashboard updated for ${dashboardDate}`
+          : 'Raw data saved successfully',
         fileName,
         prCount: prNumbers.length,
         prNumbers,
+        dashboardSaved,
+        dashboardDate: dashboardSaved ? dashboardDate : undefined,
+        dashboardPrCount: dashboardSaved ? dashboardPrCount : undefined,
       };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -330,5 +366,33 @@ export class RawDataController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  /**
+   * Delete a raw data file
+   */
+  @Delete(':fileName')
+  deleteRawDataFile(@Param('fileName') fileName: string) {
+    // Validate file name format
+    if (!fileName || !fileName.startsWith('raw-data-') || !fileName.endsWith('.json')) {
+      throw new HttpException(
+        'Invalid file name format',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const deleted = this.rawDataService.deleteRawDataFile(fileName);
+    if (!deleted) {
+      throw new HttpException(
+        `File not found: ${fileName}`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return {
+      success: true,
+      message: `File ${fileName} deleted successfully`,
+      fileName,
+    };
   }
 }

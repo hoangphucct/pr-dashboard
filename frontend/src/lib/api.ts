@@ -88,6 +88,15 @@ export const dashboardApi = {
       method: 'DELETE',
     });
   },
+
+  /**
+   * Delete all data for a specific date
+   */
+  deleteDataByDate: (date: string): Promise<{ success: boolean; message: string; date: string }> => {
+    return fetchApi(`/dashboard/date/${encodeURIComponent(date)}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 /**
@@ -119,6 +128,15 @@ export const rawDataApi = {
     return fetchApi<ProcessRawDataResponse>('/raw-data', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Delete a raw data file
+   */
+  deleteRawDataFile: (fileName: string): Promise<{ success: boolean; message: string; fileName: string }> => {
+    return fetchApi(`/raw-data/${encodeURIComponent(fileName)}`, {
+      method: 'DELETE',
     });
   },
 };

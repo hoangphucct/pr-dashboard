@@ -55,3 +55,21 @@ export function useDeletePr() {
     },
   });
 }
+
+/**
+ * Hook for deleting all data for a specific date
+ */
+export function useDeleteDataByDate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (date: string) => dashboardApi.deleteDataByDate(date),
+    onSuccess: (result) => {
+      toast.success(result.message);
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete data: ${error.message}`);
+    },
+  });
+}

@@ -45,6 +45,7 @@ export class PrDataHelper {
       labels: pr.labels || [],
       hasForcePushed: pr.hasForcePushed || false,
       isDraft: pr.isDraft ?? false,
+      wasCreatedAsDraft: pr.wasCreatedAsDraft ?? false,
       baseBranch: pr.baseBranch,
       headBranch: pr.headBranch,
     };
