@@ -20,6 +20,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { BranchInfo } from '@/components/ui/branch-info';
 import { PrLabels } from '@/components/ui/pr-label';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { TimeWarningButton } from '@/components/ui/time-warning-button';
 import { formatTimeWithDays, calculateOpenToMerge, calculateTotalTime } from '@/lib/utils';
 import { useDeletePr } from '@/hooks/use-dashboard';
 import type { DashboardPrData } from '@/types';
@@ -109,7 +110,12 @@ export function PrTable({ data, selectedDate, onOpenTimeline }: PrTableProps) {
                   }}
                 >
                   <TableCell>
-                    <strong style={{ color: '#4f46e5' }}>#{pr.prNumber}</strong>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <strong style={{ color: '#4f46e5' }}>#{pr.prNumber}</strong>
+                      {pr.hasTimeWarning && pr.timeWarnings && (
+                        <TimeWarningButton warnings={pr.timeWarnings} prNumber={pr.prNumber} />
+                      )}
+                    </Box>
                   </TableCell>
                   <TableCell>
                     <Stack spacing={1}>

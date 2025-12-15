@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Box, Stack } from '@mui/material';
 import { useDashboard, useDeleteDataByDate } from '@/hooks/use-dashboard';
@@ -15,7 +15,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import type { DashboardPrData } from '@/types';
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const dateParam = searchParams.get('date') || undefined;
@@ -117,5 +117,13 @@ export default function DashboardPage() {
         prData={selectedPr?.prData || null}
       />
     </Box>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <DashboardPageContent />
+    </Suspense>
   );
 }

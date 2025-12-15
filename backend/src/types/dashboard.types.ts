@@ -1,3 +1,5 @@
+import type { TimeWarning } from './storage.types';
+
 /**
  * Dashboard related types
  */
@@ -28,4 +30,7 @@ export interface DashboardPrData {
   needsTimelineUpdate?: boolean;
   baseBranch?: string;
   headBranch?: string;
+  /** Time warning information */
+  hasTimeWarning?: boolean;
+  timeWarnings?: TimeWarning[];
 }

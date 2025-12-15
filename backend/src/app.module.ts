@@ -5,6 +5,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrService } from '@pr/pr.service';
+import { TimeWarningService } from '@pr/time-warning.service';
 import { DashboardController } from '@dashboard/dashboard.controller';
 import { RawDataController } from '@raw-data/raw-data.controller';
 import { RawDataService } from '@raw-data/raw-data.service';
@@ -52,6 +53,7 @@ import { AuthModule } from '@auth/auth.module';
     },
     AppService,
     PrService,
+    TimeWarningService,
     GitHubService,
     GitHubGraphQLService,
     StorageService,

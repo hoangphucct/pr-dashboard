@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Box, Stack } from '@mui/material';
 import { useRawData, useDeleteRawDataFile } from '@/hooks/use-raw-data';
@@ -15,7 +15,7 @@ import { ErrorAlert } from '@/components/ui/error-alert';
 import { EmptyState } from '@/components/ui/empty-state';
 import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 
-export default function RawDataPage() {
+function RawDataPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const selectedFile = searchParams.get('selectedFile') || undefined;
@@ -101,5 +101,13 @@ export default function RawDataPage() {
           )}
       </Stack>
     </Box>
+  );
+}
+
+export default function RawDataPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <RawDataPageContent />
+    </Suspense>
   );
 }

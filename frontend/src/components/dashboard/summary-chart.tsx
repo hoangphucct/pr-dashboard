@@ -106,7 +106,7 @@ export function SummaryChart({ data }: SummaryChartProps) {
         },
         ticks: {
           color: '#64748b',
-          font: { weight: '500' as const },
+          font: { weight: 'bold' as const },
         },
       },
       y: {
@@ -134,7 +134,7 @@ export function SummaryChart({ data }: SummaryChartProps) {
           pointStyle: 'circle',
           padding: 20,
           color: '#374151',
-          font: { size: 12, weight: '500' as const },
+          font: { size: 12, weight: 'bold' as const },
         },
       },
       title: {

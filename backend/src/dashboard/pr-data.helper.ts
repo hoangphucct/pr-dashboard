@@ -48,6 +48,8 @@ export class PrDataHelper {
       wasCreatedAsDraft: pr.wasCreatedAsDraft ?? false,
       baseBranch: pr.baseBranch,
       headBranch: pr.headBranch,
+      hasTimeWarning: pr.hasTimeWarning ?? false,
+      timeWarnings: pr.timeWarnings ?? [],
     };
   }
 

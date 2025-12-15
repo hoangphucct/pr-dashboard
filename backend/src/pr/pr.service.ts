@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { GitHubService } from '@github/github.service';
 import { CommitService } from '@commit/commit.service';
 import { BusinessDaysService } from '@utils/business-days.service';
+import { TimeWarningService } from '@pr/time-warning.service';
 import type { PrMetrics } from '@shared/storage.types';
 import type {
   GitHubPullRequestDetail,
@@ -14,6 +15,7 @@ export class PrService {
     private readonly githubService: GitHubService,
     private readonly commitService: CommitService,
     private readonly businessDaysService: BusinessDaysService,
+    private readonly timeWarningService: TimeWarningService,
   ) {}
 
   /**
@@ -58,21 +60,43 @@ export class PrService {
       hasForcePushed,
       wasCreatedAsDraft,
     );
+
+    let metrics: PrMetrics;
     if (status === 'Draft') {
-      return {
+      metrics = {
         ...baseMetrics,
         commitToOpen: 0,
         openToReview: 0,
         reviewToApproval: 0,
         approvalToMerge: 0,
       };
+    } else {
+      metrics = {
+        ...baseMetrics,
+        commitToOpen: this.calculateCommitToOpen(prDetails, events),
+        openToReview: this.calculateOpenToReview(prDetails, events),
+        reviewToApproval: this.calculateReviewToApproval(prDetails),
+        approvalToMerge: this.calculateApprovalToMerge(prDetails),
+      };
     }
+
+    // Check time warnings
+    const warningResult = this.timeWarningService.checkWarnings({
+      commitToOpen: metrics.commitToOpen,
+      openToReview: metrics.openToReview,
+      reviewToApproval: metrics.reviewToApproval,
+      approvalToMerge: metrics.approvalToMerge,
+      baseBranch: metrics.baseBranch,
+      createdAt: metrics.createdAt,
+      changedFiles: prDetails.changed_files,
+      additions: prDetails.additions,
+      deletions: prDetails.deletions,
+    });
+
     return {
-      ...baseMetrics,
-      commitToOpen: this.calculateCommitToOpen(prDetails, events),
-      openToReview: this.calculateOpenToReview(prDetails, events),
-      reviewToApproval: this.calculateReviewToApproval(prDetails),
-      approvalToMerge: this.calculateApprovalToMerge(prDetails),
+      ...metrics,
+      hasTimeWarning: warningResult.hasWarning,
+      timeWarnings: warningResult.warnings,
     };
   }
 

@@ -1,4 +1,22 @@
 /**
+ * Time warning types
+ */
+export type TimeWarningType =
+  | 'commitToOpen'
+  | 'openToReview'
+  | 'reviewToApproval'
+  | 'approvalToMerge';
+
+export interface TimeWarning {
+  type: TimeWarningType;
+  label: string;
+  limit: number;
+  actual: number;
+  exceeded: boolean;
+  suggestedReasons: string[];
+}
+
+/**
  * Dashboard related types
  */
 export interface DashboardPrData {
@@ -22,6 +40,9 @@ export interface DashboardPrData {
   needsTimelineUpdate?: boolean;
   baseBranch?: string;
   headBranch?: string;
+  /** Time warning information */
+  hasTimeWarning?: boolean;
+  timeWarnings?: TimeWarning[];
 }
 
 export interface PrLabel {
