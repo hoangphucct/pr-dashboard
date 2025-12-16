@@ -59,7 +59,7 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Re-install Chromium on the final clean image
+# Install Chromium and necessary dependencies for Puppeteer
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -68,7 +68,6 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont
 
-# Set production environment variables
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
     NODE_ENV=production
@@ -77,29 +76,27 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 COPY backend/package*.json ./
 RUN npm ci --only=production
 
-# Copy the built application directory. If npm run build correctly outputs to 'dist' 
-# inside the WORKDIR (/app), this path is correct.
+# Copy built artifacts from the base-builder stage
 COPY --from=base-builder /app/dist ./dist
-
-# Copy public static files
 COPY backend/public ./public
+
+# --------------------------
+# IMPORTANT FIX STEP:
+# 1. CREATE USER/GROUP FIRST
+# --------------------------
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
+
+# After that run chown and set data
 RUN mkdir -p /app/data/raw && \
-    # Assign directory ownership to user 'nestjs'
-    chown -R nestjs:nodejs /app/data
-
-# Setup non-root user for the application to run
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001 && \
+    # Assign ownership to the 'nestjs' user (user already exists)
+    chown -R nestjs:nodejs /app/data && \
+    # Assign ownership to the other application directories
     chown -R nestjs:nodejs /app
-USER nestjs
 
-# Setup non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001 && \
-    chown -R nestjs:nodejs /app
 USER nestjs
 
 EXPOSE 3000
 
-# CMD for Production: Ensure it points to the copied dist/main.js
+# CMD for Production
 CMD ["node", "dist/main.js"]
