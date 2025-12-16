@@ -1,0 +1,92 @@
+# ==========================================
+# Docker CI/CD - Build & Deploy
+# ==========================================
+name: Docker CI/CD - Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # ==========================================
+  # Stage 1: Format & Lint Code (Run 'npm run fix')
+  # NOTE: This job ensures code is fixed but DOES NOT commit changes back to the repo.
+  # The fixed code exists only in the Runner's workspace for the next job.
+  # ==========================================
+  format_code:
+    name: 🎨 Format and Lint Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🛠 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # --- 1. Process Backend ---
+      - name: 📥 Install Backend Dependencies
+        run: npm install
+        working-directory: ./backend
+
+      - name: ✨ Run 'npm run fix' for Backend
+        run: npm run fix
+        working-directory: ./backend
+
+      # --- 2. Process Frontend ---
+      - name: 📥 Install Frontend Dependencies
+        run: npm install
+        working-directory: ./frontend
+
+      - name: ✨ Run 'npm run fix' for Frontend
+        run: npm run fix
+        working-directory: ./frontend
+
+  # ==========================================
+  # Stage 2: Deploy to Server
+  # ==========================================
+  deploy:
+    name: 🚀 Transfer Code, Build and Deploy
+    needs: format_code # Depends on successful formatting
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'push'
+
+    steps:
+      # 1. Checkout Repository (This pulls the code, including fixes made in 'format_code')
+      - name: ⬇️ Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Synchronize Code to Server Production
+      - name: 🔄 Sync Code to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "."
+          target: ${{ secrets.DEPLOY_PATH }}
+          exclude: ".git,.github,node_modules"
+
+      # 3. SSH and execute Build/Deploy
+      - name: 🏗 Run Build and Deploy on Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Navigate to the project directory
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            # Rebuild images with the newly synced code and force container recreation
+            # The fixed code is now in the target directory on the server
+            docker compose up -d --build --no-cache --force-recreate
+
+            # Cleanup old images
+            docker image prune -f
