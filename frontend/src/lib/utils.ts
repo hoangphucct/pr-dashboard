@@ -7,12 +7,14 @@ export function formatTimeWithDays(hours: number | null | undefined): string {
   if (hours === null || hours === undefined || hours === 0) {
     return '-';
   }
-  const days = Math.floor(hours / 24);
+  const hoursValue = hours / 24;
+  const days = Math.floor(hoursValue);
   const remainingHours = Math.round(hours % 24);
+
   if (days > 0) {
     return `${days}d ${remainingHours}h`;
   }
-  return `${Math.round(hours)}h`;
+  return `${hoursValue.toFixed(2)}h`;
 }
 
 /**

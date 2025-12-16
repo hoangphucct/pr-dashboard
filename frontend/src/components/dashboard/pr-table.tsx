@@ -74,7 +74,7 @@ export function PrTable({ data, selectedDate, onOpenTimeline }: PrTableProps) {
         }}
       >
         <TableContainer component={Paper} elevation={0} sx={{ backgroundColor: 'transparent' }}>
-          <Table sx={{ minWidth: 1000 }} aria-label="PR Cycle Time Table">
+          <Table sx={{ minWidth: 1000, tableLayout: 'fixed' }} aria-label="PR Cycle Time Table">
             <TableHead>
               <TableRow
                 sx={{
@@ -87,7 +87,18 @@ export function PrTable({ data, selectedDate, onOpenTimeline }: PrTableProps) {
                 }}
               >
                 <TableCell>PR Number</TableCell>
-                <TableCell sx={{ minWidth: 250 }}>Title</TableCell>
+                <TableCell
+                  sx={{
+                    width: 200,
+                    maxWidth: 200,
+                    minWidth: 200,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  Title
+                </TableCell>
                 <TableCell>Author</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Commit to Open (h)</TableCell>
@@ -112,12 +123,18 @@ export function PrTable({ data, selectedDate, onOpenTimeline }: PrTableProps) {
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <strong style={{ color: '#4f46e5' }}>#{pr.prNumber}</strong>
-                      {pr.hasTimeWarning && pr.timeWarnings && (
-                        <TimeWarningButton warnings={pr.timeWarnings} prNumber={pr.prNumber} />
-                      )}
                     </Box>
                   </TableCell>
-                  <TableCell>
+                  <TableCell
+                    sx={{
+                      width: 200,
+                      maxWidth: 200,
+                      minWidth: 200,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      wordBreak: 'break-all',
+                    }}
+                  >
                     <Stack spacing={1}>
                       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                         {pr.url ? (
@@ -145,13 +162,9 @@ export function PrTable({ data, selectedDate, onOpenTimeline }: PrTableProps) {
                       </Stack>
                       <BranchInfo baseBranch={pr.baseBranch} headBranch={pr.headBranch} />
                       <PrLabels labels={pr.labels} />
-                      {pr.wasCreatedAsDraft === false && (
+                      {pr.wasCreatedAsDraft === false && pr.status !== "Draft" && (
                         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                          <Chip
-                            label="Not Draft"
-                            color="error"
-                            size="small"
-                          />
+                          <Chip label="Not Draft" color="error" size="small" />
                         </Stack>
                       )}
                     </Stack>
@@ -222,6 +235,9 @@ export function PrTable({ data, selectedDate, onOpenTimeline }: PrTableProps) {
                       >
                         {deletePr.isPending ? 'Deleting...' : 'Delete'}
                       </Button>
+                      {pr.hasTimeWarning && pr.timeWarnings && (
+                        <TimeWarningButton warnings={pr.timeWarnings} prNumber={pr.prNumber} />
+                      )}
                     </Stack>
                   </TableCell>
                 </TableRow>
