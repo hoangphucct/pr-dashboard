@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   env: {
     API_KEY: process.env.API_KEY,
+    API_URL: process.env.API_URL,
   },
   // Allow external images
   images: {
