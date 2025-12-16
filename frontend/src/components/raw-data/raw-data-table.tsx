@@ -66,7 +66,7 @@ export function RawDataTable({ data }: RawDataTableProps) {
       }}
     >
       <TableContainer component={Paper} elevation={0} sx={{ backgroundColor: 'transparent' }}>
-        <Table sx={{ minWidth: 1000 }} aria-label="Raw Data PR Table">
+        <Table sx={{ minWidth: 1000, tableLayout: 'fixed' }} aria-label="Raw Data PR Table">
           <TableHead>
             <TableRow
               sx={{
@@ -79,7 +79,18 @@ export function RawDataTable({ data }: RawDataTableProps) {
               }}
             >
               <TableCell>PR Number</TableCell>
-              <TableCell sx={{ minWidth: 250 }}>Title</TableCell>
+              <TableCell
+                sx={{
+                  width: 200,
+                  maxWidth: 200,
+                  minWidth: 200,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                Title
+              </TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Open Date</TableCell>
               <TableCell align="right">Commit to Open</TableCell>
@@ -103,7 +114,16 @@ export function RawDataTable({ data }: RawDataTableProps) {
                 <TableCell>
                   <strong style={{ color: '#4f46e5' }}>#{pr.prNumber}</strong>
                 </TableCell>
-                <TableCell>
+                <TableCell
+                  sx={{
+                    width: 200,
+                    maxWidth: 200,
+                    minWidth: 200,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    wordBreak: 'break-all',
+                  }}
+                >
                   <Stack spacing={1}>
                     <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                       {pr.url ? (

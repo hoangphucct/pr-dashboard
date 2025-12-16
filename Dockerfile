@@ -83,7 +83,15 @@ COPY --from=base-builder /app/dist ./dist
 
 # Copy public static files
 COPY backend/public ./public
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data/raw && \
+    # Assign directory ownership to user 'nestjs'
+    chown -R nestjs:nodejs /app/data
+
+# Setup non-root user for the application to run
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001 && \
+    chown -R nestjs:nodejs /app
+USER nestjs
 
 # Setup non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
