@@ -93,7 +93,8 @@ export function TimeWarningModal({ open, onClose, warnings, prNumber }: TimeWarn
 
       <DialogContent sx={{ pt: 0, pb: 2, bgcolor: '#fafafa' }}>
         <Typography variant="body2" sx={{ mt: 3, mb: 2.5, color: '#6b7280' }}>
-          PR này đã vi phạm <strong style={{ color: '#dc2626' }}>{warnings.length}</strong> ngưỡng thời gian xử lý:
+          PR này đã vi phạm <strong style={{ color: '#dc2626' }}>{warnings.length}</strong> ngưỡng
+          thời gian xử lý:
         </Typography>
 
         {warnings.map((warning) => (
@@ -114,7 +115,14 @@ export function TimeWarningModal({ open, onClose, warnings, prNumber }: TimeWarn
           >
             <CardContent sx={{ p: 2.5 }}>
               {/* Header with phase name and time info */}
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  mb: 2,
+                }}
+              >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box
                     sx={{
@@ -148,10 +156,12 @@ export function TimeWarningModal({ open, onClose, warnings, prNumber }: TimeWarn
               <Box sx={{ mb: 2, bgcolor: '#f9fafb', borderRadius: 1.5, p: 1.5 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 500 }}>
-                    Thực tế: <strong style={{ color: '#1f2937' }}>{formatHours(warning.actual)}</strong>
+                    Thực tế:{' '}
+                    <strong style={{ color: '#1f2937' }}>{formatHours(warning.actual)}</strong>
                   </Typography>
                   <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 500 }}>
-                    Giới hạn: <strong style={{ color: '#1f2937' }}>{formatHours(warning.limit)}</strong>
+                    Giới hạn:{' '}
+                    <strong style={{ color: '#1f2937' }}>{formatHours(warning.limit)}</strong>
                   </Typography>
                 </Box>
                 <LinearProgress

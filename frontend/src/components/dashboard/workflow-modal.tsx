@@ -55,12 +55,7 @@ export function WorkflowModal({ isOpen, onClose, prNumber, prData }: WorkflowMod
       >
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-            <Chip
-              label={`PR #${prNumber}`}
-              color="primary"
-              size="small"
-              sx={{ fontWeight: 600 }}
-            />
+            <Chip label={`PR #${prNumber}`} color="primary" size="small" sx={{ fontWeight: 600 }} />
             {prData?.status && (
               <Chip
                 label={prData.status}

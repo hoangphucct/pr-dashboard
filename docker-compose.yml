@@ -1,62 +1,53 @@
 version: '3.8'
 
 services:
+  # ==========================================
   # Backend API Service (NestJS)
+  # ==========================================
   backend:
     build:
       context: .
       dockerfile: Dockerfile
-      target: backend-builder
+      # Target is dynamically set based on NODE_ENV (e.g., development or production)
+      target: ${NODE_ENV} 
     container_name: pr-dashboard-backend
     ports:
       - '3000:3000'
+    # Volumes are required for Development mode (hot reloading)
+    # They persist even in Production, a known trade-off for single Compose file approach.
     volumes:
       - ./backend/src:/app/src
       - ./backend/package.json:/app/package.json
       - ./backend/package-lock.json:/app/package-lock.json
-      - ./backend/tsconfig.json:/app/tsconfig.json
-      - ./backend/nest-cli.json:/app/nest-cli.json
+      - /app/node_modules 
       - ./backend/data:/app/data
-      - ./backend/public:/app/public
-      - /app/node_modules
-    environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3000
-      - FRONTEND_URL=http://localhost:3001
-      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-      - PUPPETEER_HEADLESS=${PUPPETEER_HEADLESS:-true}
-      - API_KEY=${API_KEY:-}
-    command: npm run start:dev
+      - ./backend/public:/app/public 
+    env_file:
+      - ./backend/.env
     restart: unless-stopped
     networks:
       - pr-dashboard-network
 
+  # ==========================================
   # Frontend Service (Next.js)
+  # ==========================================
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-      target: development
+      # Target is dynamically set based on NODE_ENV
+      target: ${NODE_ENV}
     container_name: pr-dashboard-frontend
     ports:
       - '3001:3001'
+    # Volumes are required for Development mode
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
-      - ./frontend/package.json:/app/package.json
-      - ./frontend/package-lock.json:/app/package-lock.json
-      - ./frontend/next.config.ts:/app/next.config.ts
-      - ./frontend/tailwind.config.ts:/app/tailwind.config.ts
-      - ./frontend/tsconfig.json:/app/tsconfig.json
       - /app/node_modules
       - /app/.next
-    environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - NEXT_PUBLIC_API_URL=http://localhost:3000
-      - NEXT_PUBLIC_API_KEY=${API_KEY:-}
-      - WATCHPACK_POLLING=true
-    command: npm run dev
+    env_file:
+      - ./frontend/.env
     restart: unless-stopped
     depends_on:
       - backend

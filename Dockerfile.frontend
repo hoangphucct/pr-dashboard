@@ -1,28 +1,35 @@
 # ==========================================
 # Frontend Dockerfile (Next.js)
+# Optimized for single docker-compose.yml with dynamic target switching
 # ==========================================
 
-# Stage 1: Dependencies
+# Stage 1: Dependencies (Shared dependency installation)
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm ci
 
-# Stage 2: Development
+# ==========================================
+# Stage 2: Development (Target: development)
+# Used when NODE_ENV=development. Keeps development files for live reload.
+# ==========================================
 FROM node:20-alpine AS development
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ .
 
 EXPOSE 3001
-
 ENV PORT=3001
 ENV HOSTNAME="0.0.0.0"
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# CMD for Development: Runs Next.js with the development server
 CMD ["npm", "run", "dev"]
 
-# Stage 3: Build for production
+# ==========================================
+# Stage 3: Build for production (Target: builder)
+# Builds the optimized Next.js application
+# ==========================================
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -30,18 +37,21 @@ COPY frontend/ .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# Stage 4: Production
+# ==========================================
+# Stage 4: Production (Target: production)
+# Used when NODE_ENV=production. Creates the minimal standalone image.
+# ==========================================
 FROM node:20-alpine AS production
 WORKDIR /app
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
 
-# Create non-root user
+# Setup non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
-# Copy necessary files
+# Copy necessary files from the builder stage (using Next.js standalone output)
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
@@ -49,8 +59,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 
 EXPOSE 3001
-
 ENV PORT=3001
 ENV HOSTNAME="0.0.0.0"
 
+# CMD for Production: Runs the standalone Node.js server
 CMD ["node", "server.js"]

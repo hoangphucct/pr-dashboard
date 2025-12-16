@@ -7,10 +7,11 @@ export class HtmlParserHelper {
    */
   static parsePrsFromHtml(html: string): unknown[] {
     const prs: unknown[] = [];
-    const rowPattern = /<tr[^>]*class="[^"]*css-mfqrpf[^"]*"[^>]*>(.*?)<\/tr>/gs;
+    const rowPattern =
+      /<tr[^>]*class="[^"]*css-mfqrpf[^"]*"[^>]*>(.*?)<\/tr>/gs;
     let rowMatch;
     while ((rowMatch = rowPattern.exec(html)) !== null) {
-      const rowHtml = rowMatch[1];
+      const rowHtml = rowMatch?.[1];
       const prData = this.parsePrRowFromHtml(rowHtml);
       if (prData) {
         prs.push(prData);
@@ -49,7 +50,9 @@ export class HtmlParserHelper {
     const reviewToApproval = this.parseNumericValue(cells[5]);
     const approvalToMerge = this.parseNumericValue(cells[6]);
     const dateMatch = rowHtml.match(/(\d{4}\/\d{2}\/\d{2})\s*\([^)]+\)/);
-    const openDate = dateMatch?.[1] ? this.convertDateToIso(dateMatch[1]) : null;
+    const openDate = dateMatch?.[1]
+      ? this.convertDateToIso(dateMatch[1])
+      : null;
     return {
       prNumber,
       title,
@@ -75,7 +78,8 @@ export class HtmlParserHelper {
    */
   static extractTableCells(rowHtml: string): string[] {
     const cells: string[] = [];
-    const cellPattern = /<td[^>]*class="[^"]*css-18a3pw2[^"]*"[^>]*>(.*?)<\/td>/gs;
+    const cellPattern =
+      /<td[^>]*class="[^"]*css-18a3pw2[^"]*"[^>]*>(.*?)<\/td>/gs;
     let cellMatch;
     while ((cellMatch = cellPattern.exec(rowHtml)) !== null) {
       cells.push(cellMatch[1]);
@@ -86,7 +90,9 @@ export class HtmlParserHelper {
   /**
    * Parse branch info from string like "baseBranch ← headBranch"
    */
-  static parseBranchInfo(branchInfo: string): [string | undefined, string | undefined] {
+  static parseBranchInfo(
+    branchInfo: string,
+  ): [string | undefined, string | undefined] {
     const parts = branchInfo.split('←').map((s) => s.trim());
     if (parts.length === 2) {
       return [parts[0] || undefined, parts[1] || undefined];
@@ -109,7 +115,9 @@ export class HtmlParserHelper {
     if (!cellHtml) {
       return null;
     }
-    const valueMatch = cellHtml.match(/<div[^>]*class="[^"]*css-zcsya3[^"]*"[^>]*>([^<]+)<\/div>/);
+    const valueMatch = cellHtml.match(
+      /<div[^>]*class="[^"]*css-zcsya3[^"]*"[^>]*>([^<]+)<\/div>/,
+    );
     const value = valueMatch?.[1]?.trim();
     if (!value || value === '-') {
       return null;
@@ -141,7 +149,8 @@ export class HtmlParserHelper {
     if (typeof tableHtml !== 'string') {
       return openDatesMap;
     }
-    const rowPattern = /<tr[^>]*>.*?<a[^>]*href="[^"]*\/pull\/(\d+)"[^>]*>.*?<\/tr>/gs;
+    const rowPattern =
+      /<tr[^>]*>.*?<a[^>]*href="[^"]*\/pull\/(\d+)"[^>]*>.*?<\/tr>/gs;
     const datePattern = /(\d{4}\/\d{2}\/\d{2})\s*\([^)]+\)/;
     let rowMatch;
     while ((rowMatch = rowPattern.exec(tableHtml)) !== null) {
@@ -160,4 +169,3 @@ export class HtmlParserHelper {
     return openDatesMap;
   }
 }
-

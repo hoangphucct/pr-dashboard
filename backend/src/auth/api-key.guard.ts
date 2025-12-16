@@ -39,10 +39,7 @@ export class ApiKeyGuard implements CanActivate {
       const allowedHosts = ['localhost'];
       const isLocalRequest =
         allowedHosts.some(
-          (h) =>
-            host.includes(h) ||
-            origin.includes(h) ||
-            referer.includes(h),
+          (h) => host.includes(h) || origin.includes(h) || referer.includes(h),
         ) || !origin; // Allow requests with no origin (e.g., from same-origin)
 
       if (isLocalRequest) {

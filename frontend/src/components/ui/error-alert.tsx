@@ -16,4 +16,3 @@ export function ErrorAlert({ message, maxWidth = 1200 }: ErrorAlertProps) {
     </Box>
   );
 }
-

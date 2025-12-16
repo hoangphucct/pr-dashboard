@@ -1,13 +1,13 @@
 # ==========================================
-# Backend Dockerfile (NestJS API)
+# Backend Dockerfile (NestJS API) - Updated for Robustness
 # ==========================================
 
-# Stage 1: Build
-FROM node:20-alpine AS backend-builder
+# Stage 1: Base Builder (Shared stage for dependencies and initial build)
+FROM node:20-alpine AS base-builder
 
 WORKDIR /app
 
-# Install Chromium and dependencies for Puppeteer
+# Install Chromium and necessary dependencies for Puppeteer
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -22,70 +22,76 @@ RUN apk add --no-cache \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# Copy package files
+# Copy package files and install all dependencies (including devDependencies)
 COPY backend/package*.json ./
-
-# Install dependencies
 RUN npm ci
 
-# Copy source code
-COPY backend/ .
+# Copy configuration files (tsconfig, nest-cli) before source code
+COPY backend/tsconfig*.json ./
+COPY backend/nest-cli.json ./
+
+# Copy source code (containing the /src directory)
+COPY backend/src ./src
 
 # Build the application
+# This should reliably output to /app/dist
 RUN npm run build
 
-# Stage 2: Production
-FROM node:20-alpine AS backend-production
+# ==========================================
+# Stage 2: Development (Target: development)
+# ==========================================
+FROM base-builder AS development
+
+# Copy necessary config files needed for runtime if required, though usually handled by volume mounts
+COPY backend/nest-cli.json ./
+COPY backend/tsconfig.json ./
+
+EXPOSE 3000
+
+# CMD for Development: Runs with a watcher for hot reloading
+CMD ["npm", "run", "start:dev"]
+
+# ==========================================
+# Stage 3: Production (Target: production)
+# Minimal image with only production dependencies and built code.
+# ==========================================
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install Chromium and dependencies for Puppeteer
+# Re-install Chromium on the final clean image
 RUN apk add --no-cache \
     chromium \
     nss \
     freetype \
-    freetype-dev \
     harfbuzz \
     ca-certificates \
-    ttf-freefont \
-    && rm -rf /var/cache/apk/*
+    ttf-freefont
 
-# Set environment variables for Puppeteer
+# Set production environment variables
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
     NODE_ENV=production
 
-# Copy package files
+# Copy package files (only to install production dependencies efficiently)
 COPY backend/package*.json ./
+RUN npm ci --only=production
 
-# Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
-
-# Copy built application from builder stage
-COPY --from=backend-builder /app/dist ./dist
+# Copy the built application directory. If npm run build correctly outputs to 'dist' 
+# inside the WORKDIR (/app), this path is correct.
+COPY --from=base-builder /app/dist ./dist
 
 # Copy public static files
 COPY backend/public ./public
-
-# Create data directory
 RUN mkdir -p /app/data
 
-# Create non-root user for security
+# Setup non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001
-
-# Change ownership of app directory
-RUN chown -R nestjs:nodejs /app
-
-# Switch to non-root user
+    adduser -S nestjs -u 1001 && \
+    chown -R nestjs:nodejs /app
 USER nestjs
 
-# Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Start the application
+# CMD for Production: Ensure it points to the copied dist/main.js
 CMD ["node", "dist/main.js"]

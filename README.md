@@ -113,10 +113,10 @@ Create `.env.local` file in the `frontend` directory:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3000
-NEXT_PUBLIC_API_KEY=your-secret-api-key-here
+API_KEY=your-secret-api-key-here
 ```
 
-**Note:** `NEXT_PUBLIC_API_KEY` must match the `API_KEY` set in the backend `.env` file.
+**Note:** `API_KEY` must match the `API_KEY` set in the backend `.env` file.
 
 #### 4. Run the applications
 
@@ -320,7 +320,7 @@ npm run lint
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `NEXT_PUBLIC_API_URL` | Backend API URL (default: http://localhost:3000) | Yes |
-| `NEXT_PUBLIC_API_KEY` | API key for backend authentication (must match backend `API_KEY`) | No* |
+| `API_KEY` | API key for backend authentication (must match backend `API_KEY`) | No* |
 
 \* Required if backend `API_KEY` is set.
 

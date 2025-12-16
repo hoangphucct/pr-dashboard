@@ -28,7 +28,15 @@ export function TimeWarningButton({ warnings, prNumber }: TimeWarningButtonProps
   return (
     <>
       <Tooltip title={`${warnings.length} time warning`} arrow>
-        <Button onClick={handleOpen} color="error" sx={{ textTransform: 'none', fontSize: '0.75rem' }} component="label" role={undefined} variant="contained" tabIndex={-1}>
+        <Button
+          onClick={handleOpen}
+          color="error"
+          sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+          component="label"
+          role={undefined}
+          variant="contained"
+          tabIndex={-1}
+        >
           <Badge
             badgeContent={warnings.length}
             color="error"
@@ -44,7 +52,7 @@ export function TimeWarningButton({ warnings, prNumber }: TimeWarningButtonProps
               },
             }}
           >
-          Warnings
+            Warnings
           </Badge>
         </Button>
       </Tooltip>

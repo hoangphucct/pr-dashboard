@@ -22,4 +22,3 @@ export function RawDataHeader() {
     </Box>
   );
 }
-

@@ -162,7 +162,7 @@ export function PrTable({ data, selectedDate, onOpenTimeline }: PrTableProps) {
                       </Stack>
                       <BranchInfo baseBranch={pr.baseBranch} headBranch={pr.headBranch} />
                       <PrLabels labels={pr.labels} />
-                      {pr.wasCreatedAsDraft === false && pr.status !== "Draft" && (
+                      {pr.wasCreatedAsDraft === false && pr.status !== 'Draft' && (
                         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                           <Chip label="Not Draft" color="error" size="small" />
                         </Stack>

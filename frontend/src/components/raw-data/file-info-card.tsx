@@ -41,12 +41,7 @@ export function FileInfoCard({ fileInfo }: FileInfoCardProps) {
         </Stack>
         <Typography variant="body2" sx={{ mt: 2, color: '#64748b' }}>
           <strong>Source:</strong>{' '}
-          <MuiLink
-            href={fileInfo.url}
-            target="_blank"
-            rel="noopener"
-            sx={{ color: '#6366f1' }}
-          >
+          <MuiLink href={fileInfo.url} target="_blank" rel="noopener" sx={{ color: '#6366f1' }}>
             {fileInfo.url}
           </MuiLink>
         </Typography>
@@ -54,4 +49,3 @@ export function FileInfoCard({ fileInfo }: FileInfoCardProps) {
     </Card>
   );
 }
-

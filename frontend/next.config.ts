@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   // Disable strict mode for development (can enable later)
   reactStrictMode: true,
+  env: {
+    API_KEY: process.env.API_KEY,
+  },
   // Allow external images
   images: {
     remotePatterns: [

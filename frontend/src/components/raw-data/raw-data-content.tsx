@@ -11,11 +11,7 @@ interface RawDataContentProps {
   readonly onPageChange: (event: React.ChangeEvent<unknown>, page: number) => void;
 }
 
-export function RawDataContent({
-  data,
-  pagination,
-  onPageChange,
-}: RawDataContentProps) {
+export function RawDataContent({ data, pagination, onPageChange }: RawDataContentProps) {
   return (
     <Stack spacing={2}>
       <RawDataTable data={data} />
@@ -23,4 +19,3 @@ export function RawDataContent({
     </Stack>
   );
 }
-

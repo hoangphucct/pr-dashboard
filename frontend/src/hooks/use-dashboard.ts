@@ -8,11 +8,7 @@ import { toast } from 'sonner';
 /**
  * Hook for fetching dashboard data with pagination
  */
-export function useDashboard(
-  date?: string,
-  page?: number,
-  limit?: number,
-) {
+export function useDashboard(date?: string, page?: number, limit?: number) {
   return useQuery({
     queryKey: ['dashboard', date, page, limit],
     queryFn: () => dashboardApi.getDashboard(date, page, limit),

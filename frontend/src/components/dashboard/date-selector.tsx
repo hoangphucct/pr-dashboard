@@ -136,8 +136,8 @@ export function DateSelector({
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="delete-dialog-description">
-            This will permanently delete all PR data for <strong>{selectedDate}</strong>.
-            This action cannot be undone.
+            This will permanently delete all PR data for <strong>{selectedDate}</strong>. This
+            action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 0 }}>

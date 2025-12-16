@@ -199,10 +199,7 @@ export function SummaryChart({ data }: SummaryChartProps) {
             <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500 }}>
               Avg Commit to Open
             </Typography>
-            <Typography
-              variant="h6"
-              sx={{ color: '#6366f1', fontWeight: 700, fontSize: '1.1rem' }}
-            >
+            <Typography variant="h6" sx={{ color: '#6366f1', fontWeight: 700, fontSize: '1.1rem' }}>
               {avgCommitToOpen}h
             </Typography>
           </Box>
@@ -210,10 +207,7 @@ export function SummaryChart({ data }: SummaryChartProps) {
             <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500 }}>
               Avg Open to Review
             </Typography>
-            <Typography
-              variant="h6"
-              sx={{ color: '#ec4899', fontWeight: 700, fontSize: '1.1rem' }}
-            >
+            <Typography variant="h6" sx={{ color: '#ec4899', fontWeight: 700, fontSize: '1.1rem' }}>
               {avgOpenToReview}h
             </Typography>
           </Box>
@@ -221,10 +215,7 @@ export function SummaryChart({ data }: SummaryChartProps) {
             <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500 }}>
               Avg Review to Approval
             </Typography>
-            <Typography
-              variant="h6"
-              sx={{ color: '#3b82f6', fontWeight: 700, fontSize: '1.1rem' }}
-            >
+            <Typography variant="h6" sx={{ color: '#3b82f6', fontWeight: 700, fontSize: '1.1rem' }}>
               {avgReviewToApproval}h
             </Typography>
           </Box>
@@ -232,10 +223,7 @@ export function SummaryChart({ data }: SummaryChartProps) {
             <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500 }}>
               Avg Approval to Merge
             </Typography>
-            <Typography
-              variant="h6"
-              sx={{ color: '#10b981', fontWeight: 700, fontSize: '1.1rem' }}
-            >
+            <Typography variant="h6" sx={{ color: '#10b981', fontWeight: 700, fontSize: '1.1rem' }}>
               {avgApprovalToMerge}h
             </Typography>
           </Box>

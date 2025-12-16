@@ -21,4 +21,3 @@ export function LoadingSpinner({ size = 60, color = '#6366f1' }: LoadingSpinnerP
     </Box>
   );
 }
-

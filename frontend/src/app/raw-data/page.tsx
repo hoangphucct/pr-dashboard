@@ -93,12 +93,9 @@ function RawDataPageContent() {
         {!data?.hasData && selectedFile && (
           <EmptyState message="No PR data found in selected file." />
         )}
-        {!data?.hasData &&
-          !selectedFile &&
-          data?.rawDataFiles &&
-          data.rawDataFiles.length > 0 && (
-            <EmptyState message="Select a file from the dropdown above to view its data." />
-          )}
+        {!data?.hasData && !selectedFile && data?.rawDataFiles && data.rawDataFiles.length > 0 && (
+          <EmptyState message="Select a file from the dropdown above to view its data." />
+        )}
       </Stack>
     </Box>
   );

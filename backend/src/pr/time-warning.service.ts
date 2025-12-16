@@ -179,4 +179,3 @@ export class TimeWarningService {
     return [...new Set(reasons)].slice(0, 4);
   }
 }
-

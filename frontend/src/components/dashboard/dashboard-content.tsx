@@ -23,14 +23,9 @@ export function DashboardContent({
 }: DashboardContentProps) {
   return (
     <Stack spacing={3}>
-      <PrTable
-        data={data}
-        selectedDate={selectedDate}
-        onOpenTimeline={onOpenTimeline}
-      />
+      <PrTable data={data} selectedDate={selectedDate} onOpenTimeline={onOpenTimeline} />
       <DataPagination pagination={pagination} onPageChange={onPageChange} />
       <SummaryChart data={data} />
     </Stack>
   );
 }
-

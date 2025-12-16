@@ -126,7 +126,11 @@ export class FindyScraperService {
         console.log('Browser launched successfully');
         return this.browser;
       } catch (error) {
-        lastError = await this.handleBrowserLaunchError(error, attempt, maxRetries);
+        lastError = await this.handleBrowserLaunchError(
+          error,
+          attempt,
+          maxRetries,
+        );
       }
     }
     throw new Error(
@@ -1116,7 +1120,11 @@ export class FindyScraperService {
         }
       }
 
-      if (prNumber && !Number.isNaN(prNumber) && !prNumbers.includes(prNumber)) {
+      if (
+        prNumber &&
+        !Number.isNaN(prNumber) &&
+        !prNumbers.includes(prNumber)
+      ) {
         prNumbers.push(prNumber);
       }
     }

@@ -60,16 +60,26 @@ export class RawDataController {
     const prsData = this.processFileContent(fileContent);
     const pagination = this.parsePaginationParams(page, limit);
     const totalPages = Math.ceil(prsData.length / pagination.limit);
-    const normalizedPagination = this.normalizePagination(pagination, totalPages);
+    const normalizedPagination = this.normalizePagination(
+      pagination,
+      totalPages,
+    );
     const paginatedPrs = this.applyPagination(prsData, normalizedPagination);
-    const selectedFileData = this.buildFileInfo(selectedFile, fileContent, prsData.length);
+    const selectedFileData = this.buildFileInfo(
+      selectedFile,
+      fileContent,
+      prsData.length,
+    );
     return {
       rawDataFiles,
       selectedFile,
       selectedFileData,
       prsData: paginatedPrs,
       hasData: paginatedPrs.length > 0,
-      pagination: this.buildPaginationInfo(normalizedPagination, prsData.length),
+      pagination: this.buildPaginationInfo(
+        normalizedPagination,
+        prsData.length,
+      ),
     };
   }
 
@@ -145,7 +155,9 @@ export class RawDataController {
   ): DashboardPrData[] {
     const htmlData = fileContent.data as { html?: string } | null;
     if (htmlData?.html && typeof htmlData.html === 'string') {
-      const openDatesMap = HtmlParserHelper.extractOpenDatesFromHtml(fileContent.data);
+      const openDatesMap = HtmlParserHelper.extractOpenDatesFromHtml(
+        fileContent.data,
+      );
       return prsData.map((pr) => {
         const openDate =
           pr.openDate ||
@@ -279,7 +291,9 @@ export class RawDataController {
    * Process raw data from Findy Team URL
    */
   @Post()
-  async processRawData(@Body() body: { findyUrl?: string; saveToDashboard?: boolean }) {
+  async processRawData(
+    @Body() body: { findyUrl?: string; saveToDashboard?: boolean },
+  ) {
     const findyUrl = body.findyUrl?.trim();
     const saveToDashboard = body.saveToDashboard !== false; // Default to true
 
@@ -330,16 +344,23 @@ export class RawDataController {
       if (saveToDashboard && prNumbers.length > 0) {
         try {
           dashboardDate = new Date().toISOString().split('T')[0];
-          console.log(`[Raw Data] Fetching metrics for ${prNumbers.length} PRs...`);
-          
+          console.log(
+            `[Raw Data] Fetching metrics for ${prNumbers.length} PRs...`,
+          );
+
           const metrics = await this.prService.calculateMetrics(prNumbers);
           this.storageService.saveDataByDate(metrics, dashboardDate, true);
-          
+
           dashboardSaved = true;
           dashboardPrCount = metrics.length;
-          console.log(`[Raw Data] Saved ${dashboardPrCount} PRs to dashboard data for ${dashboardDate}`);
+          console.log(
+            `[Raw Data] Saved ${dashboardPrCount} PRs to dashboard data for ${dashboardDate}`,
+          );
         } catch (dashboardError) {
-          console.error('[Raw Data] Error saving to dashboard:', dashboardError);
+          console.error(
+            '[Raw Data] Error saving to dashboard:',
+            dashboardError,
+          );
           // Don't fail the whole request, just log the error
         }
       }
@@ -374,7 +395,11 @@ export class RawDataController {
   @Delete(':fileName')
   deleteRawDataFile(@Param('fileName') fileName: string) {
     // Validate file name format
-    if (!fileName || !fileName.startsWith('raw-data-') || !fileName.endsWith('.json')) {
+    if (
+      !fileName ||
+      !fileName.startsWith('raw-data-') ||
+      !fileName.endsWith('.json')
+    ) {
       throw new HttpException(
         'Invalid file name format',
         HttpStatus.BAD_REQUEST,

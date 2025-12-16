@@ -8,9 +8,8 @@ import type {
   ProcessRawDataResponse,
   ApiError,
 } from '@/types';
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
+const API_KEY = process.env.API_KEY || '';
 
 /**
  * Generic fetch wrapper with error handling
@@ -47,19 +46,13 @@ export const dashboardApi = {
   /**
    * Get dashboard data for a specific date with pagination
    */
-  getDashboard: (
-    date?: string,
-    page?: number,
-    limit?: number,
-  ): Promise<DashboardResponse> => {
+  getDashboard: (date?: string, page?: number, limit?: number): Promise<DashboardResponse> => {
     const params = new URLSearchParams();
     if (date) params.append('date', date);
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
     const queryString = params.toString();
-    return fetchApi<DashboardResponse>(
-      `/dashboard${queryString ? `?${queryString}` : ''}`,
-    );
+    return fetchApi<DashboardResponse>(`/dashboard${queryString ? `?${queryString}` : ''}`);
   },
 
   /**
@@ -92,7 +85,9 @@ export const dashboardApi = {
   /**
    * Delete all data for a specific date
    */
-  deleteDataByDate: (date: string): Promise<{ success: boolean; message: string; date: string }> => {
+  deleteDataByDate: (
+    date: string,
+  ): Promise<{ success: boolean; message: string; date: string }> => {
     return fetchApi(`/dashboard/date/${encodeURIComponent(date)}`, {
       method: 'DELETE',
     });
@@ -106,19 +101,13 @@ export const rawDataApi = {
   /**
    * Get raw data files list and optionally load a selected file's data with pagination
    */
-  getRawData: (
-    selectedFile?: string,
-    page?: number,
-    limit?: number,
-  ): Promise<RawDataResponse> => {
+  getRawData: (selectedFile?: string, page?: number, limit?: number): Promise<RawDataResponse> => {
     const params = new URLSearchParams();
     if (selectedFile) params.append('selectedFile', selectedFile);
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
     const queryString = params.toString();
-    return fetchApi<RawDataResponse>(
-      `/raw-data${queryString ? `?${queryString}` : ''}`,
-    );
+    return fetchApi<RawDataResponse>(`/raw-data${queryString ? `?${queryString}` : ''}`);
   },
 
   /**
@@ -134,7 +123,9 @@ export const rawDataApi = {
   /**
    * Delete a raw data file
    */
-  deleteRawDataFile: (fileName: string): Promise<{ success: boolean; message: string; fileName: string }> => {
+  deleteRawDataFile: (
+    fileName: string,
+  ): Promise<{ success: boolean; message: string; fileName: string }> => {
     return fetchApi(`/raw-data/${encodeURIComponent(fileName)}`, {
       method: 'DELETE',
     });

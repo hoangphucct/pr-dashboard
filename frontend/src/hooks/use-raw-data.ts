@@ -8,11 +8,7 @@ import { toast } from 'sonner';
 /**
  * Hook for fetching raw data files with pagination
  */
-export function useRawData(
-  selectedFile?: string,
-  page?: number,
-  limit?: number,
-) {
+export function useRawData(selectedFile?: string, page?: number, limit?: number) {
   return useQuery({
     queryKey: ['raw-data', selectedFile, page, limit],
     queryFn: () => rawDataApi.getRawData(selectedFile, page, limit),

@@ -149,7 +149,11 @@ export function RawDataTable({ data }: RawDataTableProps) {
                 <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
                   <strong style={{ color: '#059669' }}>
                     {formatRawValue(
-                      calculateOpenToMerge(pr.openToReview, pr.reviewToApproval, pr.approvalToMerge),
+                      calculateOpenToMerge(
+                        pr.openToReview,
+                        pr.reviewToApproval,
+                        pr.approvalToMerge,
+                      ),
                     )}
                   </strong>
                 </TableCell>

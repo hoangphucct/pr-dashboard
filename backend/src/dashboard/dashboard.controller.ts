@@ -69,7 +69,8 @@ export class DashboardController {
         ? DEFAULT_PAGE_LIMIT
         : limitNum;
     const totalPages = Math.ceil(prsWithForcePushCheck.length / validLimit);
-    const normalizedPage = totalPages > 0 && validPage > totalPages ? totalPages : validPage;
+    const normalizedPage =
+      totalPages > 0 && validPage > totalPages ? totalPages : validPage;
     const startIndex = (normalizedPage - 1) * validLimit;
     const endIndex = startIndex + validLimit;
     const paginatedData = prsWithForcePushCheck.slice(startIndex, endIndex);
