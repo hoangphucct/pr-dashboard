@@ -1,3 +1,5 @@
+import type { ParsedPr } from '@shared/helper.types';
+
 /**
  * Helper functions for parsing PR data from HTML table
  */
@@ -9,9 +11,9 @@ export class HtmlParserHelper {
     const prs: unknown[] = [];
     const rowPattern =
       /<tr[^>]*class="[^"]*css-mfqrpf[^"]*"[^>]*>(.*?)<\/tr>/gs;
-    let rowMatch;
+    let rowMatch: RegExpExecArray | null;
     while ((rowMatch = rowPattern.exec(html)) !== null) {
-      const rowHtml = rowMatch?.[1];
+      const rowHtml = String(rowMatch[1]);
       const prData = this.parsePrRowFromHtml(rowHtml);
       if (prData) {
         prs.push(prData);
@@ -23,33 +25,36 @@ export class HtmlParserHelper {
   /**
    * Parse a single PR row from HTML
    */
-  static parsePrRowFromHtml(rowHtml: string): unknown | null {
-    const prNumberMatch = rowHtml.match(/href="[^"]*\/pull\/(\d+)"/);
-    if (!prNumberMatch?.[1]) {
+  static parsePrRowFromHtml(rowHtml: string): ParsedPr | null {
+    const prNumberMatch = /href="[^"]*\/pull\/(\d+)"/.exec(rowHtml);
+    if (!prNumberMatch) {
       return null;
     }
     const prNumber = Number.parseInt(prNumberMatch[1], 10);
     if (Number.isNaN(prNumber)) {
       return null;
     }
-    const titleMatch = rowHtml.match(/title="([^"]+)"/);
+    const titleMatch = /title="([^"]+)"/.exec(rowHtml);
     const title = titleMatch?.[1] || `PR #${prNumber}`;
     const url = `https://github.com/ZIGExN/dorapita/pull/${prNumber}`;
-    const branchMatch = rowHtml.match(
-      /<div[^>]*class="[^"]*css-1p1bspk[^"]*"[^>]*>([^<]+)<\/div>/,
-    );
+    const branchMatch =
+      /<div[^>]*class="[^"]*css-1p1bspk[^"]*"[^>]*>([^<]+)<\/div>/.exec(
+        rowHtml,
+      );
     const branchInfo = branchMatch?.[1] || '';
     const [baseBranch, headBranch] = this.parseBranchInfo(branchInfo);
-    const statusMatch = rowHtml.match(
-      /<div[^>]*class="[^"]*(?:css-d9b9w0|css-vkn4bi)[^"]*"[^>]*>([^<]+)<\/div>/,
-    );
+    const statusMatch =
+      /<div[^>]*class="[^"]*(?:css-d9b9w0|css-vkn4bi)[^"]*"[^>]*>([^<]+)<\/div>/.exec(
+        rowHtml,
+      );
+
     const status = this.normalizeStatus(statusMatch?.[1] || 'Unknown');
     const cells = this.extractTableCells(rowHtml);
     const commitToOpen = this.parseNumericValue(cells[3]);
     const openToReview = this.parseNumericValue(cells[4]);
     const reviewToApproval = this.parseNumericValue(cells[5]);
     const approvalToMerge = this.parseNumericValue(cells[6]);
-    const dateMatch = rowHtml.match(/(\d{4}\/\d{2}\/\d{2})\s*\([^)]+\)/);
+    const dateMatch = /(\d{4}\/\d{2}\/\d{2})\s*\([^)]+\)/.exec(rowHtml);
     const openDate = dateMatch?.[1]
       ? this.convertDateToIso(dateMatch[1])
       : null;
@@ -80,9 +85,9 @@ export class HtmlParserHelper {
     const cells: string[] = [];
     const cellPattern =
       /<td[^>]*class="[^"]*css-18a3pw2[^"]*"[^>]*>(.*?)<\/td>/gs;
-    let cellMatch;
+    let cellMatch: RegExpExecArray | null;
     while ((cellMatch = cellPattern.exec(rowHtml)) !== null) {
-      cells.push(cellMatch[1]);
+      cells.push(String(cellMatch[1]));
     }
     return cells;
   }
@@ -152,15 +157,15 @@ export class HtmlParserHelper {
     const rowPattern =
       /<tr[^>]*>.*?<a[^>]*href="[^"]*\/pull\/(\d+)"[^>]*>.*?<\/tr>/gs;
     const datePattern = /(\d{4}\/\d{2}\/\d{2})\s*\([^)]+\)/;
-    let rowMatch;
+    let rowMatch: RegExpExecArray | null;
     while ((rowMatch = rowPattern.exec(tableHtml)) !== null) {
-      const prNumber = Number.parseInt(rowMatch[1], 10);
+      const prNumber = Number.parseInt(String(rowMatch[1]), 10);
       if (Number.isNaN(prNumber)) {
         continue;
       }
-      const dateMatch = rowMatch[0].match(datePattern);
+      const dateMatch = String(rowMatch[0]).match(datePattern);
       if (dateMatch?.[1]) {
-        const isoDate = this.convertDateToIso(dateMatch[1]);
+        const isoDate = this.convertDateToIso(String(dateMatch[1]));
         if (isoDate) {
           openDatesMap.set(prNumber, isoDate);
         }

@@ -81,7 +81,6 @@ COPY --from=base-builder /app/dist ./dist
 COPY backend/public ./public
 
 # --------------------------
-# IMPORTANT FIX STEP:
 # 1. CREATE USER/GROUP FIRST
 # --------------------------
 RUN addgroup -g 1001 -S nodejs && \

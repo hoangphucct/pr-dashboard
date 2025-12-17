@@ -3,12 +3,9 @@
 import { useState } from 'react';
 import Badge from '@mui/material/Badge';
 import Tooltip from '@mui/material/Tooltip';
-import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import type { TimeWarning } from '@/types';
 import { TimeWarningModal } from './time-warning-modal';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 interface TimeWarningButtonProps {
   warnings: TimeWarning[];

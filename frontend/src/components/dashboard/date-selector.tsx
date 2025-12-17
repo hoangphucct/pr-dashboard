@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Select,
   MenuItem,
@@ -34,13 +34,10 @@ export function DateSelector({
   onDeleteDate,
   isDeleting = false,
 }: DateSelectorProps) {
-  const [today, setToday] = useState<string>('');
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Use useEffect to get today's date on client side only to avoid hydration mismatch
-  useEffect(() => {
-    setToday(new Date().toISOString().split('T')[0]);
-  }, []);
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   if (!availableDates || availableDates.length === 0) {
     return null;

@@ -44,7 +44,7 @@ export class RawDataController {
    * Get raw data files list and optionally load a selected file's data with pagination
    */
   @Get()
-  async getRawData(
+  getRawData(
     @Query('selectedFile') selectedFile?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
